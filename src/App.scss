@@ -1,0 +1,6 @@
+.app {
+  display: flex;
+  height: 100vh; // весь экран
+  min-height: 0; // чтобы flex-дети могли сжиматься при необходимости
+  overflow: hidden; // чтобы сам app не создавал лишние скроллы
+}
