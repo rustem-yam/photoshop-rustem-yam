@@ -69,10 +69,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    min-width: 100%; // минимум — wrapper
-    min-height: 100%; // минимум — wrapper
-    width: auto; // растёт с canvas
-    height: auto; // растёт с canvas
-    background-color: #262626; // твой фон
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
+    background-color: #262626;
   }
 }

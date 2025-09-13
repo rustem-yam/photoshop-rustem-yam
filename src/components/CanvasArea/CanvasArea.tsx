@@ -19,7 +19,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange }) => {
     imageSrc,
     imageInfo,
     handleFileUpload,
-    drawImage,
+    renderCanvas,
     originalImageRef,
     setImageFromDataUrl,
   } = useCanvasImage()
@@ -29,35 +29,18 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange }) => {
   const [modalOpen, setModalOpen] = useState(false)
   const [scale, setScale] = useState(100)
 
-  // Центрирование при загрузке, изменении масштаба
   useCenteredScroll(wrapperRef, [imageSrc, scale])
 
-  // Рисуем исходное изображение при загрузке
   useEffect(() => {
     if (!imageSrc) return
-    drawImage()
+    renderCanvas(100)
     setScale(100)
-  }, [imageSrc, drawImage])
+  }, [imageSrc, renderCanvas])
 
-  // Применяем масштаб к canvas
   useEffect(() => {
-    if (!canvasRef.current || !originalImageRef.current || !sizerRef.current) return
-    const ctx = canvasRef.current.getContext("2d")
-    if (!ctx) return
-
-    const img = originalImageRef.current
-    const scaledW = Math.round(img.naturalWidth * (scale / 100))
-    const scaledH = Math.round(img.naturalHeight * (scale / 100))
-
-    canvasRef.current.width = scaledW
-    canvasRef.current.height = scaledH
-    ctx.clearRect(0, 0, scaledW, scaledH)
-    ctx.drawImage(img, 0, 0, scaledW, scaledH)
-
-    // Обновляем размеры sizer
-    sizerRef.current.style.width = `${scaledW}px`
-    sizerRef.current.style.height = `${scaledH}px`
-  }, [scale, canvasRef, originalImageRef, sizerRef])
+    if (!imageSrc) return
+    renderCanvas(scale)
+  }, [scale, imageSrc, renderCanvas])
 
   useEffect(() => {
     const onOpen = () => setModalOpen(true)

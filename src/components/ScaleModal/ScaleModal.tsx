@@ -54,7 +54,6 @@ const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, originalImage, o
 
   const [mode, width, height, keepAspect] = watch(["mode", "width", "height", "keepAspect"])
 
-  // Сброс формы при открытии
   useEffect(() => {
     if (open) reset({ mode: "percent", width: 100, height: 100, keepAspect: true, method: "bilinear" })
   }, [open, reset])
