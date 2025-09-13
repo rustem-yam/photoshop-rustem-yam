@@ -6,6 +6,8 @@ export const useCanvasImage = () => {
   const sizerRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
+  const originalImageRef = useRef<HTMLImageElement | null>(null)
+
   const [imageSrc, setImageSrc] = useState<string | null>(null)
   const [imageInfo, setImageInfo] = useState({ width: 0, height: 0, depth: 0 })
   const [isTransparent, setIsTransparent] = useState(false)
@@ -18,8 +20,22 @@ export const useCanvasImage = () => {
       setImageSrc(img.src)
       const ext = file.name.split(".").pop()?.toLowerCase()
       setIsTransparent(ext === "png")
+      originalImageRef.current = img
     }
     img.src = URL.createObjectURL(file)
+  }
+
+  const setImageFromDataUrl = async (dataUrl: string, width?: number, height?: number) => {
+    const img = new Image()
+    await new Promise<void>((res, rej) => {
+      img.onload = () => res()
+      img.onerror = rej
+      img.src = dataUrl
+    })
+    setImageSrc(img.src)
+    setImageInfo({ width: width ?? img.width, height: height ?? img.height, depth: 24 })
+    originalImageRef.current = img
+    setIsTransparent(img.src.startsWith("data:image/png"))
   }
 
   const drawImage = useCallback(() => {
@@ -57,5 +73,16 @@ export const useCanvasImage = () => {
     }
   }, [imageSrc, isTransparent])
 
-  return { canvasRef, wrapperRef, sizerRef, imageSrc, imageInfo, isTransparent, handleFileUpload, drawImage }
+  return {
+    canvasRef,
+    wrapperRef,
+    sizerRef,
+    imageSrc,
+    imageInfo,
+    isTransparent,
+    handleFileUpload,
+    drawImage,
+    originalImageRef,
+    setImageFromDataUrl,
+  }
 }

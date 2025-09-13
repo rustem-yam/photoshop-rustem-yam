@@ -5,4 +5,26 @@
   flex: 0 0 40px;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  padding: 4px 0;
+
+  .icon-button {
+    color: #c3c3c3;
+    transition: all 0.2s ease;
+
+    &:hover:not(.disabled) {
+      color: #ffffff;
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    &:active:not(.disabled) {
+      color: #ffffff;
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+
+    &.disabled {
+      color: #999999;
+      pointer-events: none;
+    }
+  }
 }

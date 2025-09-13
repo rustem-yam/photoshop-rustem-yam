@@ -1,62 +1,98 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useState, type Dispatch } from "react"
 import StatusBar from "@/components/StatusBar/StatusBar"
 import { AddBox, CloudUpload } from "@mui/icons-material"
 import { IconButton, Tooltip, Typography, Snackbar, Alert } from "@mui/material"
 import { useCanvasImage } from "@/hooks/useCanvasImage"
 import { useCenteredScroll } from "@/hooks/useCenteredScroll"
+import ScaleModal from "@/components/ScaleModal/ScaleModal"
 import "./CanvasArea.scss"
 
-const CanvasArea: React.FC = () => {
-  const { canvasRef, wrapperRef, sizerRef, imageSrc, imageInfo, isTransparent, handleFileUpload, drawImage } =
-    useCanvasImage()
+interface CanvasAreaProps {
+  onImageChange: Dispatch<React.SetStateAction<boolean>>
+}
+
+const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange }) => {
+  const {
+    canvasRef,
+    wrapperRef,
+    sizerRef,
+    imageSrc,
+    imageInfo,
+    handleFileUpload,
+    drawImage,
+    originalImageRef,
+    setImageFromDataUrl,
+  } = useCanvasImage()
+
   const [isDragging, setIsDragging] = useState(false)
   const [alertOpen, setAlertOpen] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [scale, setScale] = useState(100)
 
-  useCenteredScroll(wrapperRef, canvasRef, [imageSrc, isTransparent])
+  // Центрирование при загрузке, изменении масштаба
+  useCenteredScroll(wrapperRef, [imageSrc, scale])
 
+  // Рисуем исходное изображение при загрузке
   useEffect(() => {
     if (!imageSrc) return
     drawImage()
+    setScale(100)
   }, [imageSrc, drawImage])
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }
+  // Применяем масштаб к canvas
+  useEffect(() => {
+    if (!canvasRef.current || !originalImageRef.current || !sizerRef.current) return
+    const ctx = canvasRef.current.getContext("2d")
+    if (!ctx) return
 
-  const handleDragLeave = () => setIsDragging(false)
+    const img = originalImageRef.current
+    const scaledW = Math.round(img.naturalWidth * (scale / 100))
+    const scaledH = Math.round(img.naturalHeight * (scale / 100))
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(false)
-    const file = e.dataTransfer.files?.[0]
+    canvasRef.current.width = scaledW
+    canvasRef.current.height = scaledH
+    ctx.clearRect(0, 0, scaledW, scaledH)
+    ctx.drawImage(img, 0, 0, scaledW, scaledH)
+
+    // Обновляем размеры sizer
+    sizerRef.current.style.width = `${scaledW}px`
+    sizerRef.current.style.height = `${scaledH}px`
+  }, [scale, canvasRef, originalImageRef, sizerRef])
+
+  useEffect(() => {
+    const onOpen = () => setModalOpen(true)
+    window.addEventListener("open-scale-modal", onOpen as EventListener)
+    return () => window.removeEventListener("open-scale-modal", onOpen as EventListener)
+  }, [])
+
+  const handleFile = (file?: File) => {
     if (!file) return
-
     if (!file.type.startsWith("image/")) {
       setAlertOpen(true)
       return
     }
     handleFileUpload(file)
+    onImageChange(true)
   }
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    if (!file.type.startsWith("image/")) {
-      setAlertOpen(true)
-      return
-    }
-    handleFileUpload(file)
+  const handleModalConfirm = async (dataUrl: string, width: number, height: number) => {
+    await setImageFromDataUrl(dataUrl, width, height)
+    setScale(100)
   }
-
-  const handleAlertClose = () => setAlertOpen(false)
 
   return (
     <div
       className={`main ${isDragging ? "dragging" : ""}`}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
+      onDragOver={(e) => {
+        e.preventDefault()
+        setIsDragging(true)
+      }}
+      onDragLeave={() => setIsDragging(false)}
+      onDrop={(e) => {
+        e.preventDefault()
+        setIsDragging(false)
+        handleFile(e.dataTransfer.files?.[0])
+      }}
     >
       {!imageSrc && (
         <label className="upload-button">
@@ -70,7 +106,12 @@ const CanvasArea: React.FC = () => {
               )}
             </IconButton>
           </Tooltip>
-          <input type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileChange} />
+          <input
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => handleFile(e.target.files?.[0])}
+          />
         </label>
       )}
 
@@ -82,15 +123,30 @@ const CanvasArea: React.FC = () => {
         </div>
       )}
 
-      {imageSrc && <StatusBar width={imageInfo.width} height={imageInfo.height} depth={imageInfo.depth} />}
+      {imageSrc && (
+        <StatusBar
+          width={imageInfo.width}
+          height={imageInfo.height}
+          depth={imageInfo.depth}
+          scale={scale}
+          onScaleChange={setScale}
+        />
+      )}
+
+      <ScaleModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        originalImage={originalImageRef.current}
+        onConfirm={handleModalConfirm}
+      />
 
       <Snackbar
         open={alertOpen}
         autoHideDuration={3000}
-        onClose={handleAlertClose}
+        onClose={() => setAlertOpen(false)}
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
       >
-        <Alert onClose={handleAlertClose} severity="error" sx={{ width: "100%" }}>
+        <Alert severity="error" sx={{ width: "100%" }}>
           Поддерживаются только изображения!
         </Alert>
       </Snackbar>
