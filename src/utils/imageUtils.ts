@@ -106,6 +106,7 @@ export async function getImageDepth(file: File): Promise<number> {
     return png.depth
   }
 
+  // Анализируем реальные данные изображения
   const img = new Image()
   img.src = URL.createObjectURL(file)
   await new Promise((res) => (img.onload = res))
@@ -117,8 +118,59 @@ export async function getImageDepth(file: File): Promise<number> {
   if (!ctx) return 24
 
   ctx.drawImage(img, 0, 0)
-  const imageData = ctx.getImageData(0, 0, 1, 1)
-  return imageData.data.length * 8
+
+  // Анализируем все пиксели для определения реальной глубины цвета
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+  const data = imageData.data
+
+  // Анализируем уникальные значения для каждого канала
+  const uniqueR = new Set<number>()
+  const uniqueG = new Set<number>()
+  const uniqueB = new Set<number>()
+  const uniqueA = new Set<number>()
+
+  // Проверяем каждый 10-й пиксель для производительности
+  const step = Math.max(1, Math.floor(data.length / 40000)) // ~1000 пикселей максимум
+
+  for (let i = 0; i < data.length; i += step * 4) {
+    uniqueR.add(data[i]) // R
+    uniqueG.add(data[i + 1]) // G
+    uniqueB.add(data[i + 2]) // B
+    uniqueA.add(data[i + 3]) // A
+  }
+
+  // Определяем количество бит на канал на основе уникальных значений
+  const getBitsPerChannel = (uniqueValues: Set<number>): number => {
+    const count = uniqueValues.size
+    if (count <= 2) return 1
+    if (count <= 4) return 2
+    if (count <= 8) return 3
+    if (count <= 16) return 4
+    if (count <= 32) return 5
+    if (count <= 64) return 6
+    if (count <= 128) return 7
+    if (count <= 256) return 8
+    return 8 // Максимум 8 бит на канал в canvas
+  }
+
+  const bitsR = getBitsPerChannel(uniqueR)
+  const bitsG = getBitsPerChannel(uniqueG)
+  const bitsB = getBitsPerChannel(uniqueB)
+  const bitsA = getBitsPerChannel(uniqueA)
+
+  // Определяем, есть ли альфа-канал (прозрачность)
+  const hasAlpha = uniqueA.size > 1 && Array.from(uniqueA).some((a) => a < 255)
+
+  // Вычисляем общую глубину цвета
+  let totalDepth = bitsR + bitsG + bitsB
+  if (hasAlpha) {
+    totalDepth += bitsA
+  }
+
+  // Очищаем URL объекта
+  URL.revokeObjectURL(img.src)
+
+  return totalDepth
 }
 
 export const isTransparentFile = (fileName: string): boolean => {
