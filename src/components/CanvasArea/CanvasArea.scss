@@ -14,6 +14,22 @@
     background-color: #1e1e1e;
   }
 
+  &.tool-hand canvas {
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  &.tool-pipette canvas {
+    cursor: crosshair;
+  }
+
+  &.tool-none canvas {
+    cursor: default;
+  }
+
   .upload-button {
     flex: 1;
     display: flex;

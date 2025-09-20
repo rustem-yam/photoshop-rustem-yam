@@ -8,6 +8,18 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  cursor: default; // Сброс курсора для статусбара
+
+  *:not(button):not(.MuiIconButton-root):not(.MuiButton-root):not(.MuiSlider-root) {
+    cursor: default !important;
+  }
+
+  button,
+  .MuiIconButton-root,
+  .MuiButton-root,
+  .MuiSlider-root {
+    cursor: pointer !important;
+  }
 }
 
 .scale-controls {

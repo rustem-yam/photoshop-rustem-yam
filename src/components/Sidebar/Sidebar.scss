@@ -1,30 +1,101 @@
 .sidebar {
-  width: 40px;
+  width: 60px;
   background-color: #535353;
   border-right: 2px solid #161616;
-  flex: 0 0 40px;
+  flex: 0 0 60px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 4px 0;
+  padding: 8px 4px;
+  gap: 8px;
+  cursor: default; // Сброс курсора для сайдбара
 
-  .icon-button {
+  *:not(button):not(.MuiIconButton-root):not(.MuiButton-root) {
+    cursor: default !important;
+  }
+
+  button,
+  .MuiIconButton-root,
+  .MuiButton-root {
+    cursor: pointer !important;
+  }
+
+  .section-title {
+    font-size: 0.75rem;
+    color: #999;
+    margin: 0 0 8px 0;
+    text-align: center;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .tool-section,
+  .action-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .sidebar-divider {
+    margin: 8px 0;
+    border-color: #666;
+  }
+
+  .tool-button,
+  .action-button {
     color: #c3c3c3;
     transition: all 0.2s ease;
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    margin: 0 auto;
 
     &:hover:not(.disabled) {
       color: #ffffff;
       background-color: rgba(255, 255, 255, 0.1);
+      transform: scale(1.05);
     }
 
     &:active:not(.disabled) {
       color: #ffffff;
       background-color: rgba(255, 255, 255, 0.2);
+      transform: scale(0.95);
+    }
+
+    &.active {
+      color: #ffffff;
+      background-color: #1976d2;
+      box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+
+      &:hover {
+        background-color: #1565c0;
+      }
     }
 
     &.disabled {
       color: #999999;
       pointer-events: none;
+      opacity: 0.5;
+    }
+
+    .cursor-icon {
+      font-size: 1.2rem;
+    }
+  }
+
+  .tool-button {
+    &.active {
+      &::after {
+        content: "";
+        position: absolute;
+        bottom: -2px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 4px;
+        height: 4px;
+        background-color: #ffffff;
+        border-radius: 50%;
+      }
     }
   }
 }

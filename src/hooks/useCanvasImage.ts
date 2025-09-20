@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback } from "react"
-import { getImageDepth } from "@/utils/imageUtils"
+import { getImageDepth, isGB7File, convertGB7ToDataURL } from "@/utils/imageUtils"
 
+// Хук для управления canvas и изображениями
 export const useCanvasImage = () => {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const sizerRef = useRef<HTMLDivElement>(null)
@@ -11,7 +12,9 @@ export const useCanvasImage = () => {
   const [imageSrc, setImageSrc] = useState<string | null>(null)
   const [imageInfo, setImageInfo] = useState({ width: 0, height: 0, depth: 0 })
   const [isTransparent, setIsTransparent] = useState(false)
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 })
 
+  // Отрисовка изображения на canvas с заданным масштабом
   const renderCanvas = useCallback(
     (scale = 100) => {
       const canvas = canvasRef.current
@@ -27,6 +30,8 @@ export const useCanvasImage = () => {
 
       canvas.width = scaledW
       canvas.height = scaledH
+
+      setCanvasSize({ width: scaledW, height: scaledH })
 
       if (isTransparent) {
         const block = 7
@@ -49,20 +54,41 @@ export const useCanvasImage = () => {
     [isTransparent]
   )
 
+  // Загрузка и обработка файлов изображений
   const handleFileUpload = async (file: File) => {
-    const img = new Image()
-    img.onload = async () => {
-      const depth = await getImageDepth(file)
-      setImageInfo({ width: img.width, height: img.height, depth })
-      setImageSrc(img.src)
+    if (isGB7File(file)) {
+      try {
+        const dataUrl = await convertGB7ToDataURL(file)
+        const depth = await getImageDepth(file)
 
-      const ext = file.name.split(".").pop()?.toLowerCase()
-      setIsTransparent(ext === "png")
+        const img = new Image()
+        img.onload = () => {
+          setImageInfo({ width: img.width, height: img.height, depth })
+          setImageSrc(img.src)
+          setIsTransparent(true) // .gb7 файлы могут иметь прозрачность
+          originalImageRef.current = img
+          renderCanvas(100)
+        }
+        img.src = dataUrl
+      } catch (error) {
+        console.error("Ошибка при загрузке .gb7 файла:", error)
+        return
+      }
+    } else {
+      const img = new Image()
+      img.onload = async () => {
+        const depth = await getImageDepth(file)
+        setImageInfo({ width: img.width, height: img.height, depth })
+        setImageSrc(img.src)
 
-      originalImageRef.current = img
-      renderCanvas(100)
+        const ext = file.name.split(".").pop()?.toLowerCase()
+        setIsTransparent(ext === "png")
+
+        originalImageRef.current = img
+        renderCanvas(100)
+      }
+      img.src = URL.createObjectURL(file)
     }
-    img.src = URL.createObjectURL(file)
   }
 
   const setImageFromDataUrl = async (dataUrl: string, width?: number, height?: number) => {
@@ -87,6 +113,7 @@ export const useCanvasImage = () => {
     imageSrc,
     imageInfo,
     isTransparent,
+    canvasSize,
     handleFileUpload,
     originalImageRef,
     setImageFromDataUrl,
