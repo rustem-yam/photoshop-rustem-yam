@@ -1,7 +1,7 @@
 import React from "react"
 import "./Sidebar.scss"
 import { IconButton, Tooltip, Divider } from "@mui/material"
-import { ZoomIn, PanTool, Colorize } from "@mui/icons-material"
+import { ZoomIn, PanTool, Colorize, Layers } from "@mui/icons-material"
 import { TOOLS } from "@/types/tools"
 import type { ToolType } from "@/types/tools"
 
@@ -42,6 +42,16 @@ const Sidebar: React.FC<SidebarProps> = ({ hasImage, activeTool, onToolSelect })
             disabled={!hasImage}
           >
             <Colorize />
+          </IconButton>
+        </Tooltip>
+
+        <Tooltip title={`${TOOLS.layers.name} (${TOOLS.layers.hotkey})`} placement="right">
+          <IconButton
+            className={`tool-button ${activeTool === "layers" ? "active" : ""} ${!hasImage ? "disabled" : ""}`}
+            onClick={() => handleToolClick("layers")}
+            disabled={!hasImage}
+          >
+            <Layers />
           </IconButton>
         </Tooltip>
       </div>

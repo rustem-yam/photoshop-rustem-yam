@@ -1,14 +1,17 @@
-import React, { useEffect, useState, type Dispatch } from "react"
+import React, { useEffect, useState, useCallback, type Dispatch } from "react"
 import StatusBar from "@/components/StatusBar/StatusBar"
 import { AddBox, CloudUpload } from "@mui/icons-material"
 import { IconButton, Tooltip, Typography, Snackbar, Alert } from "@mui/material"
 import { useCanvasImage } from "@/hooks/useCanvasImage"
 import { useCenteredScroll } from "@/hooks/useCenteredScroll"
 import { useTools } from "@/hooks/useTools"
+import { useLayers } from "@/hooks/useLayers"
 import ScaleModal from "@/components/ScaleModal/ScaleModal"
 import InfoPanel from "@/components/InfoPanel/InfoPanel"
 import { ColorInfoDisplay, ContrastInfo } from "@/components/ColorInfo/ColorInfo"
+import LayersPanel from "@/components/LayersPanel/LayersPanel"
 import { isGB7File } from "@/utils/imageUtils"
+import { createLayerFromImage } from "@/utils/layerUtils"
 import type { ToolType } from "@/types/tools"
 import "./CanvasArea.scss"
 
@@ -28,6 +31,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
     canvasSize,
     handleFileUpload,
     renderCanvas,
+    renderLayers,
     originalImageRef,
     setImageFromDataUrl,
   } = useCanvasImage()
@@ -47,6 +51,15 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
   const [modalOpen, setModalOpen] = useState(false)
   const [scale, setScale] = useState(100)
   const [infoPanelOpen, setInfoPanelOpen] = useState(false)
+  const [layersPanelOpen, setLayersPanelOpen] = useState(false)
+
+  const { layersState, setLayersState, addLayer } = useLayers()
+
+  const updateCanvas = useCallback(() => {
+    if (layersState.layers.length > 0) {
+      renderLayers(layersState.layers, scale)
+    }
+  }, [layersState.layers, scale, renderLayers])
 
   useCenteredScroll(wrapperRef, [imageSrc, scale])
 
@@ -61,6 +74,13 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
     renderCanvas(scale)
   }, [scale, imageSrc, renderCanvas])
 
+  // Отрисовка слоев при изменении слоев или масштаба
+  useEffect(() => {
+    if (layersState.layers.length > 0) {
+      renderLayers(layersState.layers, scale)
+    }
+  }, [layersState.layers, scale, renderLayers])
+
   useEffect(() => {
     const onOpen = () => setModalOpen(true)
     window.addEventListener("open-scale-modal", onOpen as EventListener)
@@ -68,7 +88,17 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
   }, [])
 
   useEffect(() => {
-    setInfoPanelOpen(activeTool === "pipette")
+    if (activeTool === "pipette") {
+      setInfoPanelOpen(true)
+      setLayersPanelOpen(false)
+    } else if (activeTool === "layers") {
+      // Всегда разворачиваем панель слоев при активации инструмента "Слои"
+      setLayersPanelOpen(true)
+      setInfoPanelOpen(false)
+    } else {
+      setInfoPanelOpen(false)
+      setLayersPanelOpen(false)
+    }
   }, [activeTool])
 
   useEffect(() => {
@@ -119,12 +149,23 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
     }
   }, [activeTool, handState.offsetX, handState.offsetY, handState.isActive])
 
-  const handleFile = (file?: File) => {
+  const handleFile = async (file?: File) => {
     if (!file) return
     if (!file.type.startsWith("image/") && !isGB7File(file)) {
       setAlertOpen(true)
       return
     }
+
+    // Если это первое изображение и нет слоев, создаем "Слой 1"
+    if (layersState.layers.length === 0) {
+      try {
+        const layer = await createLayerFromImage(file, "Слой 1")
+        addLayer(layer)
+      } catch (error) {
+        console.error("Ошибка при создании слоя:", error)
+      }
+    }
+
     handleFileUpload(file)
     onImageChange(true)
   }
@@ -198,6 +239,19 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
         <ColorInfoDisplay color={pipetteState.primaryColor} label="Основной цвет" />
         <ColorInfoDisplay color={pipetteState.secondaryColor} label="Дополнительный цвет" />
         <ContrastInfo color1={pipetteState.primaryColor} color2={pipetteState.secondaryColor} />
+      </InfoPanel>
+
+      <InfoPanel
+        isOpen={layersPanelOpen}
+        onToggle={() => setLayersPanelOpen(!layersPanelOpen)}
+        title="Слои и альфа-каналы"
+      >
+        <LayersPanel
+          layersState={layersState}
+          onLayersStateChange={setLayersState}
+          onCanvasUpdate={updateCanvas}
+          imageSize={imageInfo}
+        />
       </InfoPanel>
 
       <Snackbar

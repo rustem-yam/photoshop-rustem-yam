@@ -164,6 +164,9 @@ export const useTools = (params: UseToolsParams = {}) => {
       } else if (key === "i" || key === "ш") {
         event.preventDefault()
         setTool("pipette")
+      } else if (key === "l" || key === "д") {
+        event.preventDefault()
+        setTool("layers")
       } else if (event.key === "Escape") {
         event.preventDefault()
         setTool("none")

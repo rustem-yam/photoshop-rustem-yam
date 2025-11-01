@@ -8,10 +8,14 @@ const App: React.FC = () => {
   const [hasImage, setHasImage] = useState(false)
   const [activeTool, setActiveTool] = useState<ToolType>("none")
 
+  const handleToolChange = (tool: ToolType) => {
+    setActiveTool(tool)
+  }
+
   return (
     <div className="app">
-      <Sidebar hasImage={hasImage} activeTool={activeTool} onToolSelect={setActiveTool} />
-      <CanvasArea onImageChange={setHasImage} onToolChange={setActiveTool} activeTool={activeTool} />
+      <Sidebar hasImage={hasImage} activeTool={activeTool} onToolSelect={handleToolChange} />
+      <CanvasArea onImageChange={setHasImage} onToolChange={handleToolChange} activeTool={activeTool} />
     </div>
   )
 }

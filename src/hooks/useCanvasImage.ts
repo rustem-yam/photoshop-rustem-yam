@@ -1,5 +1,7 @@
 import { useRef, useState, useCallback } from "react"
 import { getImageDepth, isGB7File, convertGB7ToDataURL } from "@/utils/imageUtils"
+import { renderLayersToCanvas } from "@/utils/layerUtils"
+import type { Layer } from "@/types/layers"
 
 // Хук для управления canvas и изображениями
 export const useCanvasImage = () => {
@@ -47,6 +49,55 @@ export const useCanvasImage = () => {
       }
 
       ctx.drawImage(img, 0, 0, scaledW, scaledH)
+
+      sizer.style.width = `${scaledW}px`
+      sizer.style.height = `${scaledH}px`
+    },
+    [isTransparent]
+  )
+
+  // Отрисовка слоев на canvas
+  const renderLayers = useCallback(
+    (layers: Layer[], scale = 100) => {
+      const canvas = canvasRef.current
+      const sizer = sizerRef.current
+      if (!canvas || !sizer) return
+
+      // If there are no layers - clear canvas and reset size
+      if (!layers || layers.length === 0) {
+        const ctx = canvas.getContext("2d")
+        if (ctx) {
+          ctx.clearRect(0, 0, canvas.width || 0, canvas.height || 0)
+        }
+        setCanvasSize({ width: 0, height: 0 })
+        sizer.style.width = `0px`
+        sizer.style.height = `0px`
+        return
+      }
+
+      // Находим максимальные размеры среди всех слоев
+      let maxWidth = 0
+      let maxHeight = 0
+
+      for (const layer of layers) {
+        if (layer.imageData) {
+          maxWidth = Math.max(maxWidth, layer.imageData.width)
+          maxHeight = Math.max(maxHeight, layer.imageData.height)
+        }
+      }
+
+      if (maxWidth === 0 || maxHeight === 0) return
+
+      const scaledW = Math.round(maxWidth * (scale / 100))
+      const scaledH = Math.round(maxHeight * (scale / 100))
+
+      canvas.width = scaledW
+      canvas.height = scaledH
+
+      setCanvasSize({ width: scaledW, height: scaledH })
+
+      // Отрисовываем слои
+      renderLayersToCanvas(canvas, layers, scale, isTransparent)
 
       sizer.style.width = `${scaledW}px`
       sizer.style.height = `${scaledH}px`
@@ -118,5 +169,6 @@ export const useCanvasImage = () => {
     originalImageRef,
     setImageFromDataUrl,
     renderCanvas,
+    renderLayers,
   }
 }
