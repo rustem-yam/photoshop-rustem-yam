@@ -61,7 +61,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
     }
   }, [layersState.layers, scale, renderLayers])
 
-  useCenteredScroll(wrapperRef, [imageSrc, scale])
+  useCenteredScroll(wrapperRef, `${imageSrc}|${scale}`)
 
   useEffect(() => {
     if (!imageSrc) return
@@ -136,7 +136,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
       canvas.removeEventListener("click", handleClick)
       canvas.removeEventListener("mousemove", handleMouseMove)
     }
-  }, [activeTool, imageSrc, scale, handlePipetteClick, handleHandMouseDown, handleHandMouseMove])
+  }, [activeTool, imageSrc, scale, canvasRef, handlePipetteClick, handleHandMouseDown, handleHandMouseMove])
 
   useEffect(() => {
     const sizer = sizerRef.current
@@ -147,7 +147,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
     } else {
       sizer.style.transform = "translate(0px, 0px)"
     }
-  }, [activeTool, handState.offsetX, handState.offsetY, handState.isActive])
+  }, [activeTool, sizerRef, handState.offsetX, handState.offsetY, handState.isActive])
 
   const handleFile = async (file?: File) => {
     if (!file) return

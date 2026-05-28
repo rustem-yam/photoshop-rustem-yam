@@ -142,7 +142,7 @@ const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, originalImage, o
                   {...field}
                   labelId="mode-label"
                   label="Режим"
-                  onChange={(e) => handleModeChange(e.target.value as any)}
+                  onChange={(e) => handleModeChange(e.target.value as ScaleFormData["mode"])}
                 >
                   <MenuItem value="percent">Проценты</MenuItem>
                   <MenuItem value="pixels">Пиксели</MenuItem>

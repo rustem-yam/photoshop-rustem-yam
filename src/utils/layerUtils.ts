@@ -247,7 +247,7 @@ export const renderLayersToCanvas = (
   }
 
   // Начинаем композицию: получаем базовые пиксели из текущого холста
-  let baseImage = ctx.getImageData(0, 0, scaledW, scaledH)
+  const baseImage = ctx.getImageData(0, 0, scaledW, scaledH)
 
   // Отрисовываем видимые слои снизу вверх
   const visibleLayers = layers.filter((layer) => layer.visible)

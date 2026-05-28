@@ -13,14 +13,7 @@ interface UseToolsParams {
 
 // Хук для управления инструментами: рука, пипетка, курсор
 export const useTools = (params: UseToolsParams = {}) => {
-  const {
-    canvasWidth = 0,
-    canvasHeight = 0,
-    viewportWidth = 0,
-    viewportHeight = 0,
-    onToolChange,
-    externalActiveTool,
-  } = params
+  const { canvasWidth = 0, canvasHeight = 0, onToolChange, externalActiveTool } = params
   const [activeTool, setActiveTool] = useState<ToolType>("none")
   const [pipetteState, setPipetteState] = useState<PipetteState>({
     primaryColor: null,
@@ -228,7 +221,7 @@ export const useTools = (params: UseToolsParams = {}) => {
         }
       }
     },
-    [activeTool, setTool, canvasWidth, canvasHeight, viewportWidth, viewportHeight]
+    [activeTool, setTool, canvasWidth, canvasHeight]
   )
 
   useEffect(() => {

@@ -1,6 +1,7 @@
 import { useEffect } from "react"
 
-export const useCenteredScroll = (wrapperRef: React.RefObject<HTMLElement | null>, deps: any[] = []) => {
+// Центрирует прокрутку контейнера при изменении key (новое изображение, масштаб)
+export const useCenteredScroll = (wrapperRef: React.RefObject<HTMLElement | null>, key: unknown) => {
   useEffect(() => {
     const wrapper = wrapperRef.current
     if (!wrapper) return
@@ -13,5 +14,5 @@ export const useCenteredScroll = (wrapperRef: React.RefObject<HTMLElement | null
     center()
     window.addEventListener("resize", center)
     return () => window.removeEventListener("resize", center)
-  }, deps)
+  }, [wrapperRef, key])
 }
