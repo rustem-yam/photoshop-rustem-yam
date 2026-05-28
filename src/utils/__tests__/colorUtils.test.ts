@@ -6,8 +6,8 @@ import {
   xyzToRgb,
   xyzToLab,
   labToXyz,
-  labToOklch,
-  oklchToLab,
+  labToLch,
+  lchToLab,
   getRelativeLuminance,
   calculateWCAGContrast,
   calculateAPCAContrast,
@@ -78,6 +78,29 @@ describe("Color Utils", () => {
     })
   })
 
+  describe("xyzToLab for dark colors", () => {
+    it("black is L=0, not negative", () => {
+      const result = xyzToLab(0, 0, 0)
+      expectCloseTo(result.l, 0, 3)
+      expectCloseTo(result.a, 0, 3)
+      expectCloseTo(result.b, 0, 3)
+    })
+
+    it("very dark gray uses linear segment", () => {
+      // RGB(5,5,5): Y ~ 0.001518 -> L ~ 1.371
+      const xyz = rgbToXyz(5, 5, 5)
+      const result = xyzToLab(xyz.x, xyz.y, xyz.z)
+      expectCloseTo(result.l, 1.371, 2)
+    })
+
+    it("is continuous at the threshold", () => {
+      const eps = 216 / 24389
+      const below = xyzToLab(0.95047 * (eps - 1e-9), eps - 1e-9, 1.08883 * (eps - 1e-9))
+      const above = xyzToLab(0.95047 * (eps + 1e-9), eps + 1e-9, 1.08883 * (eps + 1e-9))
+      expectCloseTo(below.l, above.l, 4)
+    })
+  })
+
   describe("labToXyz", () => {
     it("should convert Lab to XYZ correctly", () => {
       const result = labToXyz(53.24, 80.09, 67.2)
@@ -87,18 +110,18 @@ describe("Color Utils", () => {
     })
   })
 
-  describe("labToOklch", () => {
-    it("should convert Lab to OKLch correctly", () => {
-      const result = labToOklch(53.24, 80.09, 67.2)
+  describe("labToLch", () => {
+    it("should convert Lab to LCh correctly", () => {
+      const result = labToLch(53.24, 80.09, 67.2)
       expectCloseTo(result.l, 53.24, 1)
       expectCloseTo(result.c, 104.55, 1)
       expectCloseTo(result.h, 39.99, 1)
     })
   })
 
-  describe("oklchToLab", () => {
-    it("should convert OKLch to Lab correctly", () => {
-      const result = oklchToLab(53.24, 104.55, 39.99)
+  describe("lchToLab", () => {
+    it("should convert LCh to Lab correctly", () => {
+      const result = lchToLab(53.24, 104.55, 39.99)
       expectCloseTo(result.l, 53.24, 1)
       expectCloseTo(result.a, 80.09, 1)
       expectCloseTo(result.b, 67.2, 1)

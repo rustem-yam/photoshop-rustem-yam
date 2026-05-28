@@ -91,9 +91,9 @@ const ColorInfoDisplay: React.FC<ColorInfoProps> = ({ color, label }) => {
 
           <Box className="color-space">
             <ColorSpaceTooltip
-              space="Lab"
+              space="CIELAB"
               description="CIE Lab - равномерное цветовое пространство, L - светлота, a - зелено-красная ось, b - сине-желтая ось"
-              ranges="L: 0-100, a: -128-127, b: -128-127"
+              ranges="L: 0-100, a: ~-128..127, b: ~-128..127 (D65)"
             />
             <Typography className="color-space-value">
               ({formatColorValue(color.lab.l)}, {formatColorValue(color.lab.a)}, {formatColorValue(color.lab.b)})
@@ -102,12 +102,12 @@ const ColorInfoDisplay: React.FC<ColorInfoProps> = ({ color, label }) => {
 
           <Box className="color-space">
             <ColorSpaceTooltip
-              space="OKLch"
-              description="OKLch - перцептивно равномерное цветовое пространство, L - светлота, C - хрома, h - оттенок"
-              ranges="L: 0-1, C: 0-0.4, h: 0-360°"
+              space="LCh"
+              description="CIE LCh(ab) - цилиндрическая форма Lab: L - светлота, C - хрома (насыщенность), h - цветовой тон"
+              ranges="L: 0-100, C: 0-~134, h: 0-360°"
             />
             <Typography className="color-space-value">
-              ({formatColorValue(color.oklch.l)}, {formatColorValue(color.oklch.c)}, {formatColorValue(color.oklch.h)}°)
+              ({formatColorValue(color.lch.l)}, {formatColorValue(color.lch.c)}, {formatColorValue(color.lch.h)}°)
             </Typography>
           </Box>
         </Box>

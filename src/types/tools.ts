@@ -47,7 +47,7 @@ export interface ColorInfo {
   y: number
   xyz: { x: number; y: number; z: number }
   lab: { l: number; a: number; b: number }
-  oklch: { l: number; c: number; h: number }
+  lch: { l: number; c: number; h: number }
 }
 
 export interface PipetteState {

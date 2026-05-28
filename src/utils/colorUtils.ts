@@ -54,18 +54,22 @@ export function xyzToRgb(x: number, y: number, z: number): { r: number; g: numbe
   return denormalizeRGB(r, g, b)
 }
 
+// Пороговые константы CIE: ниже EPSILON используется линейный участок функции f(t)
+const LAB_EPSILON = 216 / 24389
+const LAB_KAPPA = 24389 / 27
+
+function labF(t: number): number {
+  return t > LAB_EPSILON ? Math.cbrt(t) : (LAB_KAPPA * t + 16) / 116
+}
+
 export function xyzToLab(x: number, y: number, z: number): { l: number; a: number; b: number } {
-  const fx = x / D65_WHITE.x
-  const fy = y / D65_WHITE.y
-  const fz = z / D65_WHITE.z
+  const fx = labF(x / D65_WHITE.x)
+  const fy = labF(y / D65_WHITE.y)
+  const fz = labF(z / D65_WHITE.z)
 
-  const fx3 = Math.pow(fx, 1 / 3)
-  const fy3 = Math.pow(fy, 1 / 3)
-  const fz3 = Math.pow(fz, 1 / 3)
-
-  const l = 116 * fy3 - 16
-  const a = 500 * (fx3 - fy3)
-  const b = 200 * (fy3 - fz3)
+  const l = 116 * fy - 16
+  const a = 500 * (fx - fy)
+  const b = 200 * (fy - fz)
 
   return { l, a, b }
 }
@@ -90,18 +94,15 @@ export function labToXyz(l: number, a: number, b: number): { x: number; y: numbe
   }
 }
 
-export function labToOklch(l: number, a: number, b: number): { l: number; c: number; h: number } {
-  const l_ok = l
-  const a_ok = a
-  const b_ok = b
+// CIE LCh(ab) — цилиндрическая форма Lab: светлота, хрома (насыщенность) и цветовой тон
+export function labToLch(l: number, a: number, b: number): { l: number; c: number; h: number } {
+  const c = Math.sqrt(a * a + b * b)
+  const h = (Math.atan2(b, a) * 180) / Math.PI
 
-  const c = Math.sqrt(a_ok * a_ok + b_ok * b_ok)
-  const h = (Math.atan2(b_ok, a_ok) * 180) / Math.PI
-
-  return { l: l_ok, c, h: h < 0 ? h + 360 : h }
+  return { l, c, h: h < 0 ? h + 360 : h }
 }
 
-export function oklchToLab(l: number, c: number, h: number): { l: number; a: number; b: number } {
+export function lchToLab(l: number, c: number, h: number): { l: number; a: number; b: number } {
   const hRad = (h * Math.PI) / 180
   const a = c * Math.cos(hRad)
   const b = c * Math.sin(hRad)
@@ -123,11 +124,11 @@ export function getColorInfo(
   y: number
   xyz: { x: number; y: number; z: number }
   lab: { l: number; a: number; b: number }
-  oklch: { l: number; c: number; h: number }
+  lch: { l: number; c: number; h: number }
 } {
   const xyz = rgbToXyz(r, g, b)
   const lab = xyzToLab(xyz.x, xyz.y, xyz.z)
-  const oklch = labToOklch(lab.l, lab.a, lab.b)
+  const lch = labToLch(lab.l, lab.a, lab.b)
 
   return {
     r,
@@ -137,7 +138,7 @@ export function getColorInfo(
     y,
     xyz,
     lab,
-    oklch,
+    lch,
   }
 }
 
