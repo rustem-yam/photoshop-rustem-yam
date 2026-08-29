@@ -11,6 +11,13 @@ interface UseToolsParams {
   externalActiveTool?: ToolType
 }
 
+// true, если событие пришло из поля ввода или открытого диалога
+export const isTypingTarget = (target: EventTarget | null): boolean => {
+  if (!(target instanceof HTMLElement)) return false
+  if (target.isContentEditable) return true
+  return target.closest("input, textarea, select, [role='dialog'], [role='listbox']") !== null
+}
+
 // Хук для управления инструментами: рука, пипетка, курсор
 export const useTools = (params: UseToolsParams = {}) => {
   const { canvasWidth = 0, canvasHeight = 0, onToolChange, externalActiveTool } = params
@@ -149,15 +156,19 @@ export const useTools = (params: UseToolsParams = {}) => {
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      const key = event.key.toLowerCase()
+      // Не перехватываем клавиши, пока пользователь печатает в полях или работает с диалогом
+      if (isTypingTarget(event.target)) return
+      // Сочетания с Ctrl/Alt/Meta обрабатываются отдельно (открыть, сохранить и т.д.)
+      if (event.ctrlKey || event.metaKey || event.altKey) return
 
-      if (key === "h" || key === "р") {
+      // event.code не зависит от раскладки: KeyH сработает и для «р»
+      if (event.code === "KeyH") {
         event.preventDefault()
         setTool("hand")
-      } else if (key === "i" || key === "ш") {
+      } else if (event.code === "KeyI") {
         event.preventDefault()
         setTool("pipette")
-      } else if (key === "l" || key === "д") {
+      } else if (event.code === "KeyL") {
         event.preventDefault()
         setTool("layers")
       } else if (event.key === "Escape") {
