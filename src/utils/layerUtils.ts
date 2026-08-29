@@ -1,10 +1,22 @@
 import type { Layer, BlendMode } from "../types/layers"
-import UPNG from "upng-js"
+import { decodeGB7 } from "./gb7"
+import { rasterHasAlpha, toImageData } from "./raster"
 
-// Создание предварительного просмотра для слоя
+let layerCounter = 0
+// Date.now() может совпасть у двух слоёв, созданных в одну миллисекунду
+export const newLayerId = () => `layer_${Date.now()}_${++layerCounter}`
+
+// Рисует изображение в квадрат size×size с сохранением пропорций
+const drawFitted = (ctx: CanvasRenderingContext2D, source: CanvasImageSource, w: number, h: number, size: number) => {
+  const k = Math.min(size / w, size / h)
+  const dw = Math.max(1, Math.round(w * k))
+  const dh = Math.max(1, Math.round(h * k))
+  ctx.drawImage(source, 0, 0, w, h, Math.round((size - dw) / 2), Math.round((size - dh) / 2), dw, dh)
+}
+
 // Вспомогательная функция для создания слоя с обработкой альфа-канала
 const createLayerWithAlpha = (imageData: ImageData, name: string): Layer => {
-  const hasAlpha = Array.from(imageData.data).some((value, index) => (index + 1) % 4 === 0 && value !== 255)
+  const hasAlpha = rasterHasAlpha(imageData)
 
   let alpha = null
   if (hasAlpha) {
@@ -33,8 +45,8 @@ const createLayerWithAlpha = (imageData: ImageData, name: string): Layer => {
     }
   }
 
-  return {
-    id: `layer_${Date.now()}`,
+  const layer: Layer = {
+    id: newLayerId(),
     name,
     imageData,
     color: null,
@@ -44,6 +56,8 @@ const createLayerWithAlpha = (imageData: ImageData, name: string): Layer => {
     preview: "",
     alpha,
   }
+  layer.preview = createLayerPreview(layer)
+  return layer
 }
 
 export const createLayerPreview = (layer: Layer, size: number = 64): string => {
@@ -72,7 +86,7 @@ export const createLayerPreview = (layer: Layer, size: number = 64): string => {
       } else {
         tempCtx.putImageData(layer.imageData, 0, 0)
       }
-      ctx.drawImage(tempCanvas, 0, 0, size, size)
+      drawFitted(ctx, tempCanvas, tempCanvas.width, tempCanvas.height, size)
     }
   } else if (layer.color) {
     ctx.fillStyle = layer.color
@@ -99,7 +113,7 @@ export const createAlphaPreview = (imageData: ImageData, size: number = 64): str
 
   if (tempCtx) {
     tempCtx.putImageData(imageData, 0, 0)
-    ctx.drawImage(tempCanvas, 0, 0, size, size)
+    drawFitted(ctx, tempCanvas, tempCanvas.width, tempCanvas.height, size)
   }
 
   return canvas.toDataURL()
@@ -107,24 +121,10 @@ export const createAlphaPreview = (imageData: ImageData, size: number = 64): str
 
 // Создание слоя из изображения
 export const createLayerFromImage = async (file: File, name: string): Promise<Layer> => {
-  // Проверяем тип файла
-  if (file.name.toLowerCase().endsWith('.gb7')) {
-    // Для .gb7 формата используем специальную обработку
-    const arrayBuffer = await file.arrayBuffer()
-    const gb7Data = UPNG.decode(arrayBuffer) // Декодируем .gb7 файл
-    
-    const canvas = document.createElement("canvas")
-    canvas.width = gb7Data.width
-    canvas.height = gb7Data.height
-    const ctx = canvas.getContext("2d")
-    
-    if (!ctx) throw new Error("Не удалось получить контекст canvas")
-
-    // Создаем ImageData из данных .gb7
-    const imageData = ctx.createImageData(gb7Data.width, gb7Data.height)
-    imageData.data.set(new Uint8ClampedArray(gb7Data.data))
-    
-    return createLayerWithAlpha(imageData, name)
+  // .gb7 декодируем собственным декодером
+  if (file.name.toLowerCase().endsWith(".gb7")) {
+    const { raster } = decodeGB7(await file.arrayBuffer())
+    return createLayerWithAlpha(toImageData(raster), name)
   }
 
   // Для остальных форматов используем стандартную обработку
@@ -144,12 +144,8 @@ export const createLayerFromImage = async (file: File, name: string): Promise<La
   ctx.drawImage(img, 0, 0)
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
 
-  // Проверяем, есть ли альфа-канал в изображении (если хотя бы один пиксель имеет альфу != 255)
-  const layer = createLayerWithAlpha(imageData, name)
-  layer.preview = createLayerPreview(layer)
-
   URL.revokeObjectURL(img.src)
-  return layer
+  return createLayerWithAlpha(imageData, name)
 }
 
 // Создание слоя из цвета
@@ -166,7 +162,7 @@ export const createLayerFromColor = (color: string, name: string, width: number,
   const imageData = ctx.getImageData(0, 0, width, height)
 
   const layer: Layer = {
-    id: `layer_${Date.now()}`,
+    id: newLayerId(),
     name,
     imageData,
     color,

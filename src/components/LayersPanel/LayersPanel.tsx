@@ -398,7 +398,7 @@ const LayersPanel: React.FC<LayersPanelProps> = ({ layersState, onLayersStateCha
               <input
                 ref={imageInputRef}
                 type="file"
-                accept="image/*"
+                accept="image/*,.gb7"
                 style={{ display: "none" }}
                 onChange={() => {
                   const file = imageInputRef.current?.files?.[0] || null
