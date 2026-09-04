@@ -5,6 +5,7 @@ import { IconButton, Tooltip, Typography, Snackbar, Alert } from "@mui/material"
 import { useCenteredScroll } from "@/hooks/useCenteredScroll"
 import { useTools } from "@/hooks/useTools"
 import { useImageDocument } from "@/hooks/useImageDocument"
+import { useCommand, useCommandShortcuts } from "@/hooks/useCommand"
 import ScaleModal from "@/components/ScaleModal/ScaleModal"
 import InfoPanel from "@/components/InfoPanel/InfoPanel"
 import { ColorInfoDisplay, ContrastInfo } from "@/components/ColorInfo/ColorInfo"
@@ -24,6 +25,7 @@ interface CanvasAreaProps {
 const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, activeTool: externalActiveTool }) => {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { layersState, setLayersState, info, size, version, hasImage, openFile, resizeDocument } = useImageDocument()
 
@@ -71,11 +73,9 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
     canvas.getContext("2d")?.putImageData(toImageData(composite), 0, 0)
   }, [composite])
 
-  useEffect(() => {
-    const onOpen = () => setModalOpen(true)
-    window.addEventListener("open-scale-modal", onOpen as EventListener)
-    return () => window.removeEventListener("open-scale-modal", onOpen as EventListener)
-  }, [])
+  useCommandShortcuts()
+  useCommand("open-file", () => fileInputRef.current?.click())
+  useCommand("open-scale-modal", () => hasImage && setModalOpen(true))
 
   useEffect(() => {
     if (activeTool === "pipette") {
@@ -154,8 +154,20 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
         handleFile(e.dataTransfer.files?.[0])
       }}
     >
+      <input
+        ref={fileInputRef}
+        id="file-input"
+        type="file"
+        accept="image/png,image/jpeg,.png,.jpg,.jpeg,.gb7,image/*"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          handleFile(e.target.files?.[0])
+          e.target.value = ""
+        }}
+      />
+
       {!hasImage && (
-        <label className="upload-button">
+        <label className="upload-button" htmlFor="file-input">
           <Typography variant="h6">Загрузите или перетащите изображение</Typography>
           <Tooltip title="Поддерживаемые форматы: png, jpg, jpeg, gb7">
             <IconButton color="primary" component="span" className="upload-icon">
@@ -166,15 +178,6 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
               )}
             </IconButton>
           </Tooltip>
-          <input
-            type="file"
-            accept="image/*,.gb7"
-            style={{ display: "none" }}
-            onChange={(e) => {
-              handleFile(e.target.files?.[0])
-              e.target.value = ""
-            }}
-          />
         </label>
       )}
 
