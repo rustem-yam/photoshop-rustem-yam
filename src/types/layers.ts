@@ -3,21 +3,22 @@ export type BlendMode = "normal" | "multiply" | "screen" | "overlay"
 export interface Layer {
   id: string
   name: string
-  imageData: ImageData | null
+  // Пиксели слоя; альфа-канал хранится в A-компоненте
+  imageData: ImageData
   color: string | null
   opacity: number
   visible: boolean
   blendMode: BlendMode
   preview: string // DataURL для предварительного просмотра
+  // Есть у слоёв с прозрачностью: превью альфа-канала и его видимость
   alpha: {
-    imageData: ImageData | null
     preview: string
     visible: boolean
   } | null
 }
 
 export interface LayersState {
-  layers: Layer[]
+  layers: Layer[] // снизу вверх: layers[0] — нижний слой
   activeLayerId: string | null
 }
 

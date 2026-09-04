@@ -63,7 +63,8 @@ const ColorInfoDisplay: React.FC<ColorInfoProps> = ({ color, label }) => {
           {label}
         </Typography>
         <Typography variant="body2" className="color-coordinates">
-          Координаты: ({color.x}, {color.y})
+          Координаты: ({color.x}, {color.y}) · Альфа: {color.a}
+          {color.a === 0 ? " (прозрачный)" : ""}
         </Typography>
 
         <Box className="color-spaces">

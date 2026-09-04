@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react"
-import type { ToolType, PipetteState, HandState, ColorInfo } from "@/types/tools"
+import type { ToolType, PipetteState, HandState, ColorInfo, PickedPixel } from "@/types/tools"
 import { getColorInfo } from "@/utils/colorUtils"
 
 interface UseToolsParams {
@@ -59,44 +59,20 @@ export const useTools = (params: UseToolsParams = {}) => {
     [onToolChange]
   )
 
-  // Обработка клика пипетки для захвата цвета
+  // Пипетка: пиксель берётся из исходного изображения (координаты уже пересчитаны в пиксели документа)
   const handlePipetteClick = useCallback(
-    (canvas: HTMLCanvasElement, event: MouseEvent, scale: number) => {
+    (event: MouseEvent, pixel: PickedPixel) => {
       if (activeTool !== "pipette") return
 
-      const rect = canvas.getBoundingClientRect()
-      const x = Math.floor(event.clientX - rect.left)
-      const y = Math.floor(event.clientY - rect.top)
+      const colorInfo: ColorInfo = { ...getColorInfo(pixel.r, pixel.g, pixel.b, pixel.x, pixel.y), a: pixel.a }
+      // Alt/Ctrl/Shift + клик — дополнительный цвет
+      const isSecondary = event.altKey || event.ctrlKey || event.shiftKey
 
-      const ctx = canvas.getContext("2d")
-      if (!ctx) return
-
-      const imageData = ctx.getImageData(x, y, 1, 1)
-      const [r, g, b] = imageData.data
-
-      // Координаты относительно оригинального изображения
-      const originalX = Math.floor(x / scale)
-      const originalY = Math.floor(y / scale)
-
-      const colorInfo: ColorInfo = getColorInfo(r, g, b, originalX, originalY)
-
-      setPipetteState((prev) => {
-        const isSecondary = event.altKey || event.ctrlKey || event.shiftKey
-
-        if (isSecondary) {
-          return {
-            ...prev,
-            secondaryColor: colorInfo,
-            isActive: true,
-          }
-        } else {
-          return {
-            ...prev,
-            primaryColor: colorInfo,
-            isActive: true,
-          }
-        }
-      })
+      setPipetteState((prev) =>
+        isSecondary
+          ? { ...prev, secondaryColor: colorInfo, isActive: true }
+          : { ...prev, primaryColor: colorInfo, isActive: true }
+      )
     },
     [activeTool]
   )

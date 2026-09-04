@@ -39,10 +39,21 @@ export const TOOLS: Record<ToolType, Tool> = {
   },
 }
 
+// Пиксель изображения под курсором пипетки
+export interface PickedPixel {
+  x: number
+  y: number
+  r: number
+  g: number
+  b: number
+  a: number
+}
+
 export interface ColorInfo {
   r: number
   g: number
   b: number
+  a: number
   x: number
   y: number
   xyz: { x: number; y: number; z: number }

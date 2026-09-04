@@ -3,28 +3,6 @@ import UPNG from "upng-js"
 import { decodeGB7, readGB7Header } from "./gb7"
 import { toImageData } from "./raster"
 
-// Парсинг GB7 файла собственным декодером
-export async function parseGB7File(file: File) {
-  const { header, raster } = decodeGB7(await file.arrayBuffer())
-  return { header, imageData: toImageData(raster) }
-}
-
-// Конвертация GB7 файла в DataURL для отображения
-export async function convertGB7ToDataURL(file: File): Promise<string> {
-  const { imageData, header } = await parseGB7File(file)
-
-  const canvas = document.createElement("canvas")
-  canvas.width = header.width
-  canvas.height = header.height
-  const ctx = canvas.getContext("2d")
-
-  if (!ctx) {
-    throw new Error("Не удалось получить контекст canvas")
-  }
-
-  ctx.putImageData(imageData, 0, 0)
-  return canvas.toDataURL("image/png")
-}
 
 export function isGB7File(file: File): boolean {
   return file.name.toLowerCase().endsWith(".gb7")
@@ -110,11 +88,6 @@ export async function getImageDepth(file: File): Promise<number> {
   return totalDepth
 }
 
-export const isTransparentFile = (fileName: string): boolean => {
-  const ext = fileName.split(".").pop()?.toLowerCase()
-  return ext === "png" || ext === "gb7"
-}
-
 export const loadImage = (file: File | string): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -127,4 +100,27 @@ export const loadImage = (file: File | string): Promise<HTMLImageElement> => {
       img.src = URL.createObjectURL(file)
     }
   })
+}
+
+// Декодирование файла в пиксели RGBA и определение глубины цвета
+export async function decodeImageFile(file: File): Promise<{ imageData: ImageData; depth: number }> {
+  if (isGB7File(file)) {
+    const { header, raster } = decodeGB7(await file.arrayBuffer())
+    return { imageData: toImageData(raster), depth: header.hasMask ? 8 : 7 }
+  }
+
+  const img = await loadImage(file)
+  try {
+    const canvas = document.createElement("canvas")
+    canvas.width = img.naturalWidth
+    canvas.height = img.naturalHeight
+    const ctx = canvas.getContext("2d", { willReadFrequently: true })
+    if (!ctx) throw new Error("Не удалось получить контекст canvas")
+    ctx.drawImage(img, 0, 0)
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+    const depth = await getImageDepth(file)
+    return { imageData, depth }
+  } finally {
+    URL.revokeObjectURL(img.src)
+  }
 }

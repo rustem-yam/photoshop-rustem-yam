@@ -87,8 +87,20 @@
     justify-content: center;
     min-width: 100%;
     min-height: 100%;
-    width: auto;
-    height: auto;
     background-color: #262626;
+
+    canvas {
+      display: block;
+      flex: none;
+      // Шахматка под прозрачными пикселями
+      background-color: #fff;
+      background-image: conic-gradient(#ccc 25%, transparent 0 50%, #ccc 0 75%, transparent 0);
+      background-size: 16px 16px;
+
+      // При увеличении пиксели не размываются
+      &.pixelated {
+        image-rendering: pixelated;
+      }
+    }
   }
 }

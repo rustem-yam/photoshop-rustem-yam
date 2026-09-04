@@ -36,13 +36,17 @@ import {
 } from "@mui/icons-material"
 import type { Layer, LayersState, BlendMode } from "../../types/layers"
 import { BLEND_MODES } from "../../types/layers"
-import { createLayerFromImage, createLayerFromColor } from "../../utils/layerUtils"
+import {
+  createLayerFromImage,
+  createLayerFromColor,
+  createLayerPreview,
+  withLayerImage,
+} from "../../utils/layerUtils"
 import "./LayersPanel.scss"
 
 interface LayersPanelProps {
   layersState: LayersState
   onLayersStateChange: (state: LayersState) => void
-  onCanvasUpdate: () => void
   imageSize?: { width: number; height: number }
 }
 
@@ -108,6 +112,8 @@ const SortableLayerItem: React.FC<SortableLayerItemProps> = ({
 
       <ListItemText
         primary={layer.name}
+        // В secondary лежат Select и Slider (div), поэтому обёртка — div, а не p
+        slotProps={{ secondary: { component: "div" } }}
         secondary={
           <Box className="layer-controls">
             <FormControl size="small" className="blend-mode-select">
@@ -165,7 +171,7 @@ const SortableLayerItem: React.FC<SortableLayerItemProps> = ({
   )
 }
 
-const LayersPanel: React.FC<LayersPanelProps> = ({ layersState, onLayersStateChange, onCanvasUpdate, imageSize }) => {
+const LayersPanel: React.FC<LayersPanelProps> = ({ layersState, onLayersStateChange, imageSize }) => {
   const [addLayerDialogOpen, setAddLayerDialogOpen] = useState(false)
   const [newLayerName, setNewLayerName] = useState("")
 
@@ -181,6 +187,9 @@ const LayersPanel: React.FC<LayersPanelProps> = ({ layersState, onLayersStateCha
     })
   )
 
+  // В списке верхний слой показывается первым, как в Photoshop
+  const displayLayers = [...layersState.layers].reverse()
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
 
@@ -195,7 +204,6 @@ const LayersPanel: React.FC<LayersPanelProps> = ({ layersState, onLayersStateCha
         layers: newLayers,
       }
       onLayersStateChange(updatedState)
-      onCanvasUpdate()
     }
   }
 
@@ -208,8 +216,8 @@ const LayersPanel: React.FC<LayersPanelProps> = ({ layersState, onLayersStateCha
       if (layerType === "image" && selectedImageFile) {
         newLayer = await createLayerFromImage(selectedImageFile, newLayerName)
       } else if (layerType === "color") {
-        const width = imageSize?.width || layersState.layers[0]?.imageData?.width || 100
-        const height = imageSize?.height || layersState.layers[0]?.imageData?.height || 100
+        const width = imageSize?.width || layersState.layers[0]?.imageData.width || 100
+        const height = imageSize?.height || layersState.layers[0]?.imageData.height || 100
         newLayer = createLayerFromColor(selectedColor, newLayerName, width, height)
       } else {
         return
@@ -222,7 +230,6 @@ const LayersPanel: React.FC<LayersPanelProps> = ({ layersState, onLayersStateCha
       }
 
       onLayersStateChange(updatedState)
-      onCanvasUpdate()
       setAddLayerDialogOpen(false)
       setNewLayerName("")
       setSelectedImageFile(null)
@@ -238,48 +245,33 @@ const LayersPanel: React.FC<LayersPanelProps> = ({ layersState, onLayersStateCha
       activeLayerId: layersState.activeLayerId === layerId ? null : layersState.activeLayerId,
     }
     onLayersStateChange(updatedState)
-    onCanvasUpdate()
   }
 
+  // Удаление альфа-канала: слой становится полностью непрозрачным
   const handleDeleteAlpha = (layerId: string) => {
     const updatedState: LayersState = {
       ...layersState,
       layers: layersState.layers.map((layer) => {
-        if (layer.id === layerId && layer.imageData) {
-          const canvas = document.createElement('canvas')
-          canvas.width = layer.imageData.width
-          canvas.height = layer.imageData.height
-          const ctx = canvas.getContext('2d')
-          if (ctx) {
-            ctx.putImageData(layer.imageData, 0, 0)
-            const newImageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
-            for (let i = 3; i < newImageData.data.length; i += 4) {
-              newImageData.data[i] = 255
-            }
-            return { ...layer, alpha: null, imageData: newImageData }
-          }
-        }
-        return layer
+        if (layer.id !== layerId) return layer
+        const opaque = new ImageData(new Uint8ClampedArray(layer.imageData.data), layer.imageData.width)
+        for (let i = 3; i < opaque.data.length; i += 4) opaque.data[i] = 255
+        return withLayerImage(layer, opaque)
       }),
     }
     onLayersStateChange(updatedState)
-    onCanvasUpdate()
   }
 
   const handleToggleAlphaVisibility = (layerId: string) => {
     const updatedState: LayersState = {
       ...layersState,
-      layers: layersState.layers.map((layer) =>
-        layer.id === layerId && layer.alpha
-          ? { ...layer, alpha: { ...layer.alpha, visible: !layer.alpha.visible } }
-          : layer
-      ),
+      layers: layersState.layers.map((layer) => {
+        if (layer.id !== layerId || !layer.alpha) return layer
+        const updated = { ...layer, alpha: { ...layer.alpha, visible: !layer.alpha.visible } }
+        return { ...updated, preview: createLayerPreview(updated) }
+      }),
     }
     onLayersStateChange(updatedState)
-    onCanvasUpdate()
   }
-
-
 
   const handleToggleLayerVisibility = (layerId: string) => {
     const updatedState: LayersState = {
@@ -287,7 +279,6 @@ const LayersPanel: React.FC<LayersPanelProps> = ({ layersState, onLayersStateCha
       layers: layersState.layers.map((layer) => (layer.id === layerId ? { ...layer, visible: !layer.visible } : layer)),
     }
     onLayersStateChange(updatedState)
-    onCanvasUpdate()
   }
 
   const handleLayerOpacityChange = (layerId: string, opacity: number) => {
@@ -296,7 +287,6 @@ const LayersPanel: React.FC<LayersPanelProps> = ({ layersState, onLayersStateCha
       layers: layersState.layers.map((layer) => (layer.id === layerId ? { ...layer, opacity } : layer)),
     }
     onLayersStateChange(updatedState)
-    onCanvasUpdate()
   }
 
   const handleLayerBlendModeChange = (layerId: string, blendMode: BlendMode) => {
@@ -305,7 +295,6 @@ const LayersPanel: React.FC<LayersPanelProps> = ({ layersState, onLayersStateCha
       layers: layersState.layers.map((layer) => (layer.id === layerId ? { ...layer, blendMode } : layer)),
     }
     onLayersStateChange(updatedState)
-    onCanvasUpdate()
   }
 
   const handleSetActiveLayer = (layerId: string) => {
@@ -337,9 +326,9 @@ const LayersPanel: React.FC<LayersPanelProps> = ({ layersState, onLayersStateCha
         </Box>
 
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={layersState.layers.map((layer) => layer.id)} strategy={verticalListSortingStrategy}>
+          <SortableContext items={displayLayers.map((layer) => layer.id)} strategy={verticalListSortingStrategy}>
             <List dense className="layers-list">
-              {layersState.layers.map((layer) => (
+              {displayLayers.map((layer) => (
                 <SortableLayerItem
                   key={layer.id}
                   layer={layer}

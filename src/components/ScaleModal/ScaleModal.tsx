@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from "react"
+import React, { useMemo, useEffect, useState } from "react"
 import {
   Dialog,
   DialogTitle,
@@ -14,14 +14,16 @@ import {
   Checkbox,
   Typography,
   Tooltip,
+  Alert,
 } from "@mui/material"
 import { useForm, Controller } from "react-hook-form"
+import type { ResizeMethod } from "@/hooks/useImageDocument"
 
 interface ScaleModalProps {
   open: boolean
   onClose: () => void
-  originalImage: HTMLImageElement | null
-  onConfirm: (dataUrl: string, width: number, height: number) => Promise<void>
+  sourceSize: { width: number; height: number }
+  onConfirm: (width: number, height: number, method: ResizeMethod) => void | Promise<void>
 }
 
 interface ScaleFormData {
@@ -29,48 +31,48 @@ interface ScaleFormData {
   width: number
   height: number
   keepAspect: boolean
-  method: "nearest" | "bilinear"
+  method: ResizeMethod
 }
+
+const MAX_SIZE = 10000
+const MAX_PERCENT = 1000
 
 const interpolateOptions = [
   { value: "bilinear", label: "Билинейная", desc: "Плавный результат, лучше при увеличении/уменьшении" },
   { value: "nearest", label: "Ближайший сосед", desc: "Быстрее, может давать пиксельный вид" },
 ]
 
-const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, originalImage, onConfirm }) => {
-  const origW = originalImage?.naturalWidth ?? 0
-  const origH = originalImage?.naturalHeight ?? 0
+const DEFAULTS: ScaleFormData = { mode: "percent", width: 100, height: 100, keepAspect: true, method: "bilinear" }
+
+const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, sourceSize, onConfirm }) => {
+  const origW = sourceSize.width
+  const origH = sourceSize.height
   const aspect = useMemo(() => (origW && origH ? origW / origH : 1), [origW, origH])
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
 
-  const { control, watch, setValue, reset, handleSubmit } = useForm<ScaleFormData>({
-    defaultValues: {
-      mode: "percent",
-      width: 100,
-      height: 100,
-      keepAspect: true,
-      method: "bilinear",
-    },
-  })
+  const { control, watch, setValue, reset, handleSubmit } = useForm<ScaleFormData>({ defaultValues: DEFAULTS })
 
-  const [mode, width, height, keepAspect] = watch(["mode", "width", "height", "keepAspect"])
+  const [mode, width, height, keepAspect, method] = watch(["mode", "width", "height", "keepAspect", "method"])
 
   useEffect(() => {
-    if (open) reset({ mode: "percent", width: 100, height: 100, keepAspect: true, method: "bilinear" })
+    if (open) {
+      reset(DEFAULTS)
+      setError(null)
+    }
   }, [open, reset])
 
   const calculateNewDimensions = () => {
-    if (!originalImage) return { width: 0, height: 0 }
-    const newWidth = mode === "percent" ? Math.round((origW * width) / 100) : width
+    const newWidth = mode === "percent" ? Math.round((origW * width) / 100) : Math.round(width)
     const newHeight = keepAspect
       ? Math.round(newWidth / aspect)
       : mode === "percent"
         ? Math.round((origH * height) / 100)
-        : height
+        : Math.round(height)
     return { width: newWidth, height: newHeight }
   }
 
-  const handleModeChange = (newMode: "percent" | "pixels") => {
-    if (!originalImage) return
+  const handleModeChange = (newMode: ScaleFormData["mode"]) => {
     const { width: w, height: h } = calculateNewDimensions()
     setValue("width", newMode === "percent" ? Math.round((w / origW) * 100) : w)
     setValue("height", newMode === "percent" ? Math.round((h / origH) * 100) : h)
@@ -87,34 +89,42 @@ const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, originalImage, o
     if (keepAspect) setValue("width", mode === "pixels" ? Math.round(h * aspect) : h)
   }
 
+  const handleKeepAspectChange = (checked: boolean) => {
+    setValue("keepAspect", checked)
+    if (checked) setValue("height", mode === "pixels" ? Math.round(width / aspect) : width)
+  }
+
   const onSubmit = async () => {
-    if (!originalImage) return
     const { width: newW, height: newH } = calculateNewDimensions()
+    if (newW < 1 || newH < 1) {
+      setError("Размер должен быть не меньше 1 px")
+      return
+    }
+    if (newW > MAX_SIZE || newH > MAX_SIZE) {
+      setError(`Размер не может превышать ${MAX_SIZE} px по каждой стороне`)
+      return
+    }
+    setError(null)
+    setBusy(true)
     try {
-      const mod = await import("@/utils/interpolation")
-      const canvas = document.createElement("canvas")
-      canvas.width = origW
-      canvas.height = origH
-      const ctx = canvas.getContext("2d")!
-      ctx.drawImage(originalImage, 0, 0)
-      const src = ctx.getImageData(0, 0, canvas.width, canvas.height)
-      const dst =
-        watch("method") === "nearest" ? mod.nearestNeighborResize(src, newW, newH) : mod.bilinearResize(src, newW, newH)
-      const out = document.createElement("canvas")
-      out.width = newW
-      out.height = newH
-      out.getContext("2d")!.putImageData(dst, 0, 0)
-      await onConfirm(out.toDataURL("image/png"), newW, newH)
+      await onConfirm(newW, newH, method)
       onClose()
     } catch (err) {
       console.error("Ошибка обработки изображения:", err)
+      setError("Не удалось изменить размер изображения")
+    } finally {
+      setBusy(false)
     }
   }
 
   const { width: newW, height: newH } = calculateNewDimensions()
-  const showNewSize = origW && origH && (width !== 100 || height !== 100)
 
   if (!open) return null
+
+  const limits =
+    mode === "percent"
+      ? { min: { value: 1, message: "Минимум 1%" }, max: { value: MAX_PERCENT, message: `Максимум ${MAX_PERCENT}%` } }
+      : { min: { value: 1, message: "Минимум 1 px" }, max: { value: MAX_SIZE, message: `Максимум ${MAX_SIZE} px` } }
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
@@ -123,25 +133,22 @@ const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, originalImage, o
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent dividers>
           <Typography variant="body2" gutterBottom>
-            Исходный размер: {origW} × {origH}px ({((origW * origH) / 1_000_000).toFixed(2)} Мп)
+            Исходный размер: {origW} × {origH} px ({((origW * origH) / 1_000_000).toFixed(2)} Мп)
           </Typography>
-
-          {showNewSize && originalImage && (
-            <Typography variant="body2" gutterBottom>
-              Новый размер: {newW} × {newH} px ({((newW * newH) / 1_000_000).toFixed(2)} Мп)
-            </Typography>
-          )}
+          <Typography variant="body2" gutterBottom>
+            Новый размер: {newW} × {newH} px ({((newW * newH) / 1_000_000).toFixed(2)} Мп)
+          </Typography>
 
           <Controller
             name="mode"
             control={control}
             render={({ field }) => (
               <FormControl fullWidth margin="dense">
-                <InputLabel id="mode-label">Режим</InputLabel>
+                <InputLabel id="mode-label">Единицы</InputLabel>
                 <Select
                   {...field}
                   labelId="mode-label"
-                  label="Режим"
+                  label="Единицы"
                   onChange={(e) => handleModeChange(e.target.value as ScaleFormData["mode"])}
                 >
                   <MenuItem value="percent">Проценты</MenuItem>
@@ -154,16 +161,13 @@ const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, originalImage, o
           <Controller
             name="width"
             control={control}
-            rules={{
-              min: { value: 1, message: "Минимум 1" },
-              max: { value: mode === "percent" ? 3000 : 10000, message: "Слишком большое значение" },
-            }}
+            rules={limits}
             render={({ field, fieldState }) => (
               <TextField
                 {...field}
                 margin="dense"
                 fullWidth
-                label={mode === "percent" ? "Ширина %" : "Ширина px"}
+                label={mode === "percent" ? "Ширина, %" : "Ширина, px"}
                 type="number"
                 onChange={(e) => handleWidthChange(Number(e.target.value))}
                 error={!!fieldState.error}
@@ -175,16 +179,13 @@ const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, originalImage, o
           <Controller
             name="height"
             control={control}
-            rules={{
-              min: { value: 1, message: "Минимум 1" },
-              max: { value: mode === "percent" ? 3000 : 10000, message: "Слишком большое значение" },
-            }}
+            rules={limits}
             render={({ field, fieldState }) => (
               <TextField
                 {...field}
                 margin="dense"
                 fullWidth
-                label={mode === "percent" ? "Высота %" : "Высота px"}
+                label={mode === "percent" ? "Высота, %" : "Высота, px"}
                 type="number"
                 onChange={(e) => handleHeightChange(Number(e.target.value))}
                 error={!!fieldState.error}
@@ -199,7 +200,11 @@ const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, originalImage, o
             render={({ field }) => (
               <FormControlLabel
                 control={
-                  <Checkbox {...field} checked={field.value} onChange={(e) => field.onChange(e.target.checked)} />
+                  <Checkbox
+                    {...field}
+                    checked={field.value}
+                    onChange={(e) => handleKeepAspectChange(e.target.checked)}
+                  />
                 }
                 label="Сохранять пропорции"
               />
@@ -211,8 +216,8 @@ const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, originalImage, o
             control={control}
             render={({ field }) => (
               <FormControl fullWidth margin="dense">
-                <InputLabel id="method-label">Алгоритм</InputLabel>
-                <Select {...field} labelId="method-label" label="Алгоритм">
+                <InputLabel id="method-label">Интерполяция</InputLabel>
+                <Select {...field} labelId="method-label" label="Интерполяция">
                   {interpolateOptions.map((o) => (
                     <MenuItem key={o.value} value={o.value}>
                       <Tooltip title={o.desc} placement="right">
@@ -224,13 +229,19 @@ const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, originalImage, o
               </FormControl>
             )}
           />
+
+          {error && (
+            <Alert severity="error" sx={{ mt: 1 }}>
+              {error}
+            </Alert>
+          )}
         </DialogContent>
 
         <DialogActions>
           <Button onClick={onClose} color="secondary">
             Отмена
           </Button>
-          <Button type="submit" variant="contained">
+          <Button type="submit" variant="contained" disabled={busy}>
             Применить
           </Button>
         </DialogActions>
