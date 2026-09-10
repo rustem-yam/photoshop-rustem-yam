@@ -84,3 +84,51 @@ export function decodeGB7(input: ArrayBuffer | Uint8Array): { header: GB7Header;
 
   return { header, raster }
 }
+
+// Яркость по BT.601; для уже серых пикселей (R = G = B) берётся значение как есть
+export const toGray = (r: number, g: number, b: number): number =>
+  r === g && g === b ? r : Math.round(0.299 * r + 0.587 * g + 0.114 * b)
+
+// 8 бит -> 7-битная яркость
+const gray8to7 = (value: number) => Math.round((value * 127) / 255)
+
+export interface GB7EncodeOptions {
+  // "auto" — маска пишется, если в изображении есть прозрачность
+  mask?: boolean | "auto"
+}
+
+export function encodeGB7(raster: Raster, options: GB7EncodeOptions = {}): Uint8Array {
+  const { width, height, data } = raster
+  if (width < 1 || height < 1 || width > 0xffff || height > 0xffff) {
+    throw new Error("Размер изображения для .gb7 должен быть от 1 до 65535 px")
+  }
+
+  const pixelCount = width * height
+  let hasMask = options.mask === true
+  if (options.mask === undefined || options.mask === "auto") {
+    for (let i = 3; i < data.length && !hasMask; i += 4) {
+      if (data[i] !== 255) hasMask = true
+    }
+  }
+
+  const bytes = new Uint8Array(GB7_HEADER_SIZE + pixelCount)
+  bytes.set(GB7_SIGNATURE, 0)
+  bytes[4] = GB7_VERSION
+  bytes[5] = hasMask ? MASK_FLAG : 0
+  bytes[6] = width >> 8
+  bytes[7] = width & 0xff
+  bytes[8] = height >> 8
+  bytes[9] = height & 0xff
+  bytes[10] = 0
+  bytes[11] = 0
+
+  for (let i = 0; i < pixelCount; i++) {
+    const o = i * 4
+    const gray = gray8to7(toGray(data[o], data[o + 1], data[o + 2]))
+    // Полупрозрачные пиксели: видимы, если альфа не меньше половины
+    const visibleBit = hasMask && data[o + 3] >= 128 ? 0x80 : 0
+    bytes[GB7_HEADER_SIZE + i] = visibleBit | gray
+  }
+
+  return bytes
+}
