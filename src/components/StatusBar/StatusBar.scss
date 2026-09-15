@@ -2,15 +2,17 @@
   background-color: #444;
   color: #fff;
   width: 100%;
-  padding: 8px 10px;
+  padding: 4px 10px;
   align-self: flex-end;
   font-size: 14px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 4px 16px;
   cursor: default; // Сброс курсора для статусбара
 
-  *:not(button):not(.MuiIconButton-root):not(.MuiButton-root):not(.MuiSlider-root) {
+  *:not(button):not(.MuiIconButton-root):not(.MuiButton-root):not(.MuiSlider-root):not(input) {
     cursor: default !important;
   }
 
@@ -20,10 +22,46 @@
   .MuiSlider-root {
     cursor: pointer !important;
   }
+
+  .status-info {
+    flex: 1 1 auto;
+    white-space: nowrap;
+  }
+
+  .MuiIconButton-root {
+    color: #ddd;
+
+    &.Mui-disabled {
+      color: #777;
+    }
+  }
 }
 
 .scale-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
+
+  .scale-slider {
+    width: 140px;
+    margin: 0 6px;
+  }
+
+  .scale-input {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 13px;
+
+    input {
+      width: 52px;
+      padding: 2px 4px;
+      border: 1px solid #666;
+      border-radius: 4px;
+      background: #2f2f2f;
+      color: #fff;
+      font: inherit;
+      text-align: right;
+    }
+  }
 }

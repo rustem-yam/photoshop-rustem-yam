@@ -14,6 +14,7 @@ import LayersPanel from "@/components/LayersPanel/LayersPanel"
 import { isGB7File } from "@/utils/imageUtils"
 import { compositeLayers } from "@/utils/compositing"
 import { toImageData } from "@/utils/raster"
+import { fitScale } from "@/utils/zoom"
 import { baseName, downloadBlob, encodeImage, formatFromFileName, type SaveFormat } from "@/utils/exportImage"
 import type { PickedPixel, ToolType } from "@/types/tools"
 import "./CanvasArea.scss"
@@ -25,6 +26,7 @@ interface CanvasAreaProps {
 }
 
 const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, activeTool: externalActiveTool }) => {
+  const mainRef = useRef<HTMLDivElement>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -62,10 +64,21 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
 
   useCenteredScroll(wrapperRef, `${version}|${scale}`)
 
-  // Новый файл — масштаб 100%
+  // Масштаб «вписать в окно» для текущей области просмотра
+  const getFitScale = useCallback(() => {
+    const area = wrapperRef.current ?? mainRef.current
+    if (!area) return 100
+    const statusBarHeight = wrapperRef.current ? 0 : 48
+    return fitScale(size, { width: area.clientWidth - 32, height: area.clientHeight - statusBarHeight - 32 })
+  }, [size])
+
+  // Новый файл — вписываем в окно (крупные изображения уменьшаются, мелкие остаются 100%)
+  const fittedVersion = useRef(0)
   useEffect(() => {
-    setScale(100)
-  }, [version])
+    if (version === fittedVersion.current) return
+    fittedVersion.current = version
+    setScale(getFitScale())
+  }, [version, getFitScale])
 
   // Вывод на холст: холст в размер документа, масштаб просмотра — через CSS
   useEffect(() => {
@@ -152,6 +165,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
 
   return (
     <div
+      ref={mainRef}
       className={`main ${isDragging ? "dragging" : ""} tool-${activeTool}`}
       onDragOver={(e) => {
         e.preventDefault()
@@ -213,6 +227,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
           depth={info?.depth ?? 0}
           scale={scale}
           onScaleChange={setScale}
+          onFit={() => setScale(getFitScale())}
         />
       )}
 
