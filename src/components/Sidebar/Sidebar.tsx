@@ -1,7 +1,7 @@
 import React from "react"
 import "./Sidebar.scss"
 import { IconButton, Tooltip, Divider } from "@mui/material"
-import { AspectRatio, PanTool, Colorize, Layers, FolderOpen } from "@mui/icons-material"
+import { AspectRatio, PanTool, Colorize, Layers, FolderOpen, Save } from "@mui/icons-material"
 import { TOOLS } from "@/types/tools"
 import type { ToolType } from "@/types/tools"
 import { sendCommand, type AppCommand } from "@/hooks/useCommand"
@@ -20,6 +20,7 @@ const TOOL_ICONS: Partial<Record<ToolType, React.ReactNode>> = {
 
 const ACTIONS: { command: AppCommand; title: string; icon: React.ReactNode; needsImage: boolean }[] = [
   { command: "open-file", title: "Открыть изображение (Ctrl+O)", icon: <FolderOpen />, needsImage: false },
+  { command: "save-file", title: "Сохранить как PNG / JPG / GB7 (Ctrl+S)", icon: <Save />, needsImage: true },
   { command: "open-scale-modal", title: "Изменить размер изображения", icon: <AspectRatio />, needsImage: true },
 ]
 

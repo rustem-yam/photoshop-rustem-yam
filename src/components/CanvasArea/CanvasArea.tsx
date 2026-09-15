@@ -7,12 +7,14 @@ import { useTools } from "@/hooks/useTools"
 import { useImageDocument } from "@/hooks/useImageDocument"
 import { useCommand, useCommandShortcuts } from "@/hooks/useCommand"
 import ScaleModal from "@/components/ScaleModal/ScaleModal"
+import SaveDialog from "@/components/SaveDialog/SaveDialog"
 import InfoPanel from "@/components/InfoPanel/InfoPanel"
 import { ColorInfoDisplay, ContrastInfo } from "@/components/ColorInfo/ColorInfo"
 import LayersPanel from "@/components/LayersPanel/LayersPanel"
 import { isGB7File } from "@/utils/imageUtils"
 import { compositeLayers } from "@/utils/compositing"
 import { toImageData } from "@/utils/raster"
+import { baseName, downloadBlob, encodeImage, formatFromFileName, type SaveFormat } from "@/utils/exportImage"
 import type { PickedPixel, ToolType } from "@/types/tools"
 import "./CanvasArea.scss"
 
@@ -32,6 +34,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
   const [isDragging, setIsDragging] = useState(false)
   const [alertMessage, setAlertMessage] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [saveOpen, setSaveOpen] = useState(false)
   const [scale, setScale] = useState(100)
   const [infoPanelOpen, setInfoPanelOpen] = useState(false)
   const [layersPanelOpen, setLayersPanelOpen] = useState(false)
@@ -76,6 +79,13 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
   useCommandShortcuts()
   useCommand("open-file", () => fileInputRef.current?.click())
   useCommand("open-scale-modal", () => hasImage && setModalOpen(true))
+  useCommand("save-file", () => hasImage && setSaveOpen(true))
+
+  const handleSave = async (name: string, format: SaveFormat, quality: number) => {
+    if (!composite) return
+    const blob = await encodeImage(composite, format, quality)
+    downloadBlob(blob, `${name}.${format}`)
+  }
 
   useEffect(() => {
     if (activeTool === "pipette") {
@@ -211,6 +221,15 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
         onClose={() => setModalOpen(false)}
         sourceSize={size}
         onConfirm={(w, h, method) => resizeDocument(w, h, method)}
+      />
+
+      <SaveDialog
+        open={saveOpen}
+        onClose={() => setSaveOpen(false)}
+        defaultName={baseName(info?.fileName ?? "image")}
+        defaultFormat={formatFromFileName(info?.fileName ?? "")}
+        imageSize={size}
+        onSave={handleSave}
       />
 
       <InfoPanel isOpen={infoPanelOpen} onToggle={() => setInfoPanelOpen(!infoPanelOpen)} title="Информация о цвете">

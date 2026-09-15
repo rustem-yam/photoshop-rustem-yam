@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react"
 import { isTypingTarget } from "@/hooks/useTools"
 
 // Команды из сайдбара и горячих клавиш для области холста
-export type AppCommand = "open-file" | "open-scale-modal"
+export type AppCommand = "open-file" | "save-file" | "open-scale-modal"
 
 export const sendCommand = (command: AppCommand) => {
   window.dispatchEvent(new CustomEvent(command))
@@ -24,6 +24,7 @@ export const useCommand = (command: AppCommand, handler: () => void) => {
 // Сочетания Ctrl/Cmd + клавиша (по event.code — не зависит от раскладки)
 const SHORTCUTS: Record<string, AppCommand> = {
   KeyO: "open-file",
+  KeyS: "save-file",
 }
 
 export const useCommandShortcuts = () => {
