@@ -11,6 +11,7 @@ import SaveDialog from "@/components/SaveDialog/SaveDialog"
 import InfoPanel from "@/components/InfoPanel/InfoPanel"
 import { ColorInfoDisplay, ContrastInfo } from "@/components/ColorInfo/ColorInfo"
 import LayersPanel from "@/components/LayersPanel/LayersPanel"
+import ChannelsPanel from "@/components/ChannelsPanel/ChannelsPanel"
 import { isGB7File } from "@/utils/imageUtils"
 import { compositeLayers } from "@/utils/compositing"
 import { toImageData } from "@/utils/raster"
@@ -18,6 +19,20 @@ import { fitScale } from "@/utils/zoom"
 import { baseName, downloadBlob, encodeImage, formatFromFileName, type SaveFormat } from "@/utils/exportImage"
 import type { PickedPixel, ToolType } from "@/types/tools"
 import "./CanvasArea.scss"
+
+type PanelKind = "color" | "layers" | "channels"
+
+const TOOL_PANELS: Partial<Record<ToolType, PanelKind>> = {
+  pipette: "color",
+  layers: "layers",
+  channels: "channels",
+}
+
+const PANEL_TITLES: Record<PanelKind, string> = {
+  color: "Информация о цвете",
+  layers: "Слои и альфа-каналы",
+  channels: "Каналы",
+}
 
 interface CanvasAreaProps {
   onImageChange: (hasImage: boolean) => void
@@ -38,8 +53,9 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
   const [modalOpen, setModalOpen] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
   const [scale, setScale] = useState(100)
-  const [infoPanelOpen, setInfoPanelOpen] = useState(false)
-  const [layersPanelOpen, setLayersPanelOpen] = useState(false)
+  // Правая панель: содержимое зависит от последнего инструмента с панелью
+  const [panelKind, setPanelKind] = useState<PanelKind>("color")
+  const [panelOpen, setPanelOpen] = useState(false)
 
   const scaledW = Math.max(1, Math.round((size.width * scale) / 100))
   const scaledH = Math.max(1, Math.round((size.height * scale) / 100))
@@ -100,18 +116,11 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
     downloadBlob(blob, `${name}.${format}`)
   }
 
+  // При выборе пипетки, слоёв или каналов разворачиваем соответствующую панель
   useEffect(() => {
-    if (activeTool === "pipette") {
-      setInfoPanelOpen(true)
-      setLayersPanelOpen(false)
-    } else if (activeTool === "layers") {
-      // Всегда разворачиваем панель слоев при активации инструмента "Слои"
-      setLayersPanelOpen(true)
-      setInfoPanelOpen(false)
-    } else {
-      setInfoPanelOpen(false)
-      setLayersPanelOpen(false)
-    }
+    const kind = TOOL_PANELS[activeTool]
+    if (kind) setPanelKind(kind)
+    setPanelOpen(kind !== undefined)
   }, [activeTool])
 
   // Пиксель документа под курсором (с учётом масштаба и сдвига рукой)
@@ -247,18 +256,18 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
         onSave={handleSave}
       />
 
-      <InfoPanel isOpen={infoPanelOpen} onToggle={() => setInfoPanelOpen(!infoPanelOpen)} title="Информация о цвете">
-        <ColorInfoDisplay color={pipetteState.primaryColor} label="Основной цвет" />
-        <ColorInfoDisplay color={pipetteState.secondaryColor} label="Дополнительный цвет" />
-        <ContrastInfo color1={pipetteState.primaryColor} color2={pipetteState.secondaryColor} />
-      </InfoPanel>
-
-      <InfoPanel
-        isOpen={layersPanelOpen}
-        onToggle={() => setLayersPanelOpen(!layersPanelOpen)}
-        title="Слои и альфа-каналы"
-      >
-        <LayersPanel layersState={layersState} onLayersStateChange={setLayersState} imageSize={size} />
+      <InfoPanel isOpen={panelOpen} onToggle={() => setPanelOpen(!panelOpen)} title={PANEL_TITLES[panelKind]}>
+        {panelKind === "color" && (
+          <>
+            <ColorInfoDisplay color={pipetteState.primaryColor} label="Основной цвет" />
+            <ColorInfoDisplay color={pipetteState.secondaryColor} label="Дополнительный цвет" />
+            <ContrastInfo color1={pipetteState.primaryColor} color2={pipetteState.secondaryColor} />
+          </>
+        )}
+        {panelKind === "layers" && (
+          <LayersPanel layersState={layersState} onLayersStateChange={setLayersState} imageSize={size} />
+        )}
+        {panelKind === "channels" && <ChannelsPanel image={composite} />}
       </InfoPanel>
 
       <Snackbar

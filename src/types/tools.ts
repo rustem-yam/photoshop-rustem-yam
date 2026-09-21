@@ -1,4 +1,4 @@
-export type ToolType = "hand" | "pipette" | "layers" | "none"
+export type ToolType = "hand" | "pipette" | "layers" | "channels" | "none"
 
 export interface Tool {
   id: ToolType
@@ -29,6 +29,13 @@ export const TOOLS: Record<ToolType, Tool> = {
     description: "Управление слоями и альфа-каналами",
     icon: "📚",
     hotkey: "L",
+  },
+  channels: {
+    id: "channels",
+    name: "Каналы",
+    description: "Просмотр и включение цветовых каналов",
+    icon: "🌈",
+    hotkey: "C",
   },
   none: {
     id: "none",

@@ -147,6 +147,9 @@ export const useTools = (params: UseToolsParams = {}) => {
       } else if (event.code === "KeyL") {
         event.preventDefault()
         setTool("layers")
+      } else if (event.code === "KeyC") {
+        event.preventDefault()
+        setTool("channels")
       } else if (event.key === "Escape") {
         event.preventDefault()
         setTool("none")

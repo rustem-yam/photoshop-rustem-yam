@@ -1,0 +1,71 @@
+.channels-panel {
+  color: #e0e0e0;
+
+  .channels-mode {
+    margin-bottom: 0.75rem;
+    color: #c3c3c3;
+  }
+
+  .channels-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .channel-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 6px 8px;
+    border-radius: 6px;
+    background-color: #404040;
+    border: 1px solid transparent;
+    transition: background-color 0.15s;
+
+    &.selected {
+      border-color: #1976d2;
+      background-color: #4a4a4a;
+    }
+
+    &.hidden-channel .channel-thumb,
+    &.hidden-channel .channel-name {
+      opacity: 0.45;
+    }
+  }
+
+  .channel-thumb {
+    width: 56px;
+    height: 40px;
+    object-fit: contain;
+    background-color: #1a1a1a;
+    border: 1px solid #666;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+
+  .channel-name {
+    flex: 1;
+    font-size: 0.95rem;
+  }
+
+  .channel-shortcut {
+    font-size: 0.75rem;
+    color: #999;
+    font-family: monospace;
+  }
+
+  .MuiIconButton-root {
+    color: #ddd;
+  }
+
+  .channels-hint {
+    margin-top: 0.75rem;
+    color: #aaa;
+    font-size: 0.8rem;
+  }
+
+  .MuiFormControlLabel-root {
+    margin-top: 0.5rem;
+    color: #ddd;
+  }
+}
