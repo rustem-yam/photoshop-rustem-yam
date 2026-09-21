@@ -16,6 +16,14 @@ import { isGB7File } from "@/utils/imageUtils"
 import { compositeLayers } from "@/utils/compositing"
 import { toImageData } from "@/utils/raster"
 import { fitScale } from "@/utils/zoom"
+import {
+  ALL_CHANNELS_VISIBLE,
+  analyzeRaster,
+  applyChannelVisibility,
+  describeVisibility,
+  isAllVisible,
+  type ChannelVisibility,
+} from "@/utils/channels"
 import { baseName, downloadBlob, encodeImage, formatFromFileName, type SaveFormat } from "@/utils/exportImage"
 import type { PickedPixel, ToolType } from "@/types/tools"
 import "./CanvasArea.scss"
@@ -56,6 +64,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
   // Правая панель: содержимое зависит от последнего инструмента с панелью
   const [panelKind, setPanelKind] = useState<PanelKind>("color")
   const [panelOpen, setPanelOpen] = useState(false)
+  const [channels, setChannels] = useState<ChannelVisibility>(ALL_CHANNELS_VISIBLE)
+  const [colorizeChannels, setColorizeChannels] = useState(false)
 
   const scaledW = Math.max(1, Math.round((size.width * scale) / 100))
   const scaledH = Math.max(1, Math.round((size.height * scale) / 100))
@@ -72,6 +82,18 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
   const composite = useMemo(
     () => (layersState.layers.length > 0 ? compositeLayers(layersState.layers) : null),
     [layersState.layers]
+  )
+
+  // Режим изображения (RGB / оттенки серого, есть ли прозрачность)
+  const analysis = useMemo(() => (composite ? analyzeRaster(composite) : null), [composite])
+
+  // То, что выводится на экран: сведённое изображение с учётом включённых каналов
+  const displayImage = useMemo(
+    () =>
+      composite && analysis
+        ? applyChannelVisibility(composite, channels, { isGray: analysis.isGray, colorize: colorizeChannels })
+        : null,
+    [composite, analysis, channels, colorizeChannels]
   )
 
   useEffect(() => {
@@ -94,16 +116,17 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
     if (version === fittedVersion.current) return
     fittedVersion.current = version
     setScale(getFitScale())
+    setChannels(ALL_CHANNELS_VISIBLE)
   }, [version, getFitScale])
 
   // Вывод на холст: холст в размер документа, масштаб просмотра — через CSS
   useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas || !composite) return
-    canvas.width = composite.width
-    canvas.height = composite.height
-    canvas.getContext("2d")?.putImageData(toImageData(composite), 0, 0)
-  }, [composite])
+    if (!canvas || !displayImage) return
+    canvas.width = displayImage.width
+    canvas.height = displayImage.height
+    canvas.getContext("2d")?.putImageData(toImageData(displayImage), 0, 0)
+  }, [displayImage])
 
   useCommandShortcuts()
   useCommand("open-file", () => fileInputRef.current?.click())
@@ -234,6 +257,11 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
           width={size.width}
           height={size.height}
           depth={info?.depth ?? 0}
+          note={
+            analysis && !isAllVisible(channels, analysis.isGray)
+              ? `Каналы: ${describeVisibility(channels, analysis.isGray)}`
+              : undefined
+          }
           scale={scale}
           onScaleChange={setScale}
           onFit={() => setScale(getFitScale())}
@@ -267,7 +295,16 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
         {panelKind === "layers" && (
           <LayersPanel layersState={layersState} onLayersStateChange={setLayersState} imageSize={size} />
         )}
-        {panelKind === "channels" && <ChannelsPanel image={composite} />}
+        {panelKind === "channels" && (
+          <ChannelsPanel
+            image={composite}
+            analysis={analysis}
+            visibility={channels}
+            onVisibilityChange={setChannels}
+            colorize={colorizeChannels}
+            onColorizeChange={setColorizeChannels}
+          />
+        )}
       </InfoPanel>
 
       <Snackbar

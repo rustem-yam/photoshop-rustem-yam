@@ -11,9 +11,10 @@ interface StatusBarProps {
   scale: number
   onScaleChange: (v: number) => void
   onFit: () => void
+  note?: string
 }
 
-const StatusBar: React.FC<StatusBarProps> = ({ width, height, depth, scale, onScaleChange, onFit }) => {
+const StatusBar: React.FC<StatusBarProps> = ({ width, height, depth, scale, onScaleChange, onFit, note }) => {
   // Черновик значения в поле ввода; применяется по Enter или при потере фокуса
   const [draft, setDraft] = useState(String(scale))
   useEffect(() => setDraft(String(scale)), [scale])
@@ -28,6 +29,7 @@ const StatusBar: React.FC<StatusBarProps> = ({ width, height, depth, scale, onSc
     <div className="status-bar">
       <Typography variant="body2" className="status-info">
         Ширина: {width}px | Высота: {height}px | Глубина: {depth}-bit
+        {note && <span className="status-note"> | {note}</span>}
       </Typography>
 
       <div className="scale-controls">

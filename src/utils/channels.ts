@@ -54,3 +54,70 @@ export function channelToGray(raster: Raster, channel: ChannelId): Raster {
   }
   return out
 }
+
+export interface ChannelVisibility {
+  r: boolean
+  g: boolean
+  b: boolean
+  a: boolean
+}
+
+export const ALL_CHANNELS_VISIBLE: ChannelVisibility = { r: true, g: true, b: true, a: true }
+
+export const isAllVisible = (vis: ChannelVisibility, isGray: boolean) =>
+  vis.a && (isGray ? vis.r : vis.r && vis.g && vis.b)
+
+// Изображение для показа с учётом включённых каналов (сами пиксели документа не меняются).
+// - выключенный цветовой канал обнуляется;
+// - если виден ровно один цветовой канал — он показывается в оттенках серого (как в Photoshop),
+//   либо в своём цвете при colorize;
+// - если цветовые каналы скрыты, а альфа видна — показывается маска альфа-канала;
+// - выключенная альфа делает изображение непрозрачным.
+export function applyChannelVisibility(
+  raster: Raster,
+  vis: ChannelVisibility,
+  options: { isGray: boolean; colorize?: boolean }
+): Raster {
+  const { isGray, colorize = false } = options
+  if (isAllVisible(vis, isGray)) return raster
+
+  const color = isGray ? [vis.r] : [vis.r, vis.g, vis.b]
+  const shown = color.filter(Boolean).length
+  const single = !isGray && shown === 1 && !colorize ? color.indexOf(true) : -1
+
+  const src = raster.data
+  const out = createRaster(raster.width, raster.height)
+  const dst = out.data
+
+  for (let i = 0; i < src.length; i += 4) {
+    const a = vis.a ? src[i + 3] : 255
+
+    if (shown === 0) {
+      const v = vis.a ? src[i + 3] : 0
+      dst[i] = v
+      dst[i + 1] = v
+      dst[i + 2] = v
+      dst[i + 3] = 255
+    } else if (isGray || single >= 0) {
+      const v = src[i + (isGray ? 0 : single)]
+      dst[i] = v
+      dst[i + 1] = v
+      dst[i + 2] = v
+      dst[i + 3] = a
+    } else {
+      dst[i] = vis.r ? src[i] : 0
+      dst[i + 1] = vis.g ? src[i + 1] : 0
+      dst[i + 2] = vis.b ? src[i + 2] : 0
+      dst[i + 3] = a
+    }
+  }
+
+  return out
+}
+
+// Подпись видимых каналов для строки состояния, например «R, B + A»
+export function describeVisibility(vis: ChannelVisibility, isGray: boolean): string {
+  const names = isGray ? (vis.r ? ["Серый"] : []) : (["r", "g", "b"] as const).filter((c) => vis[c]).map((c) => c.toUpperCase())
+  const parts = names.length ? names.join(", ") : "—"
+  return vis.a ? `${parts} + A` : parts
+}

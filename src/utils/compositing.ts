@@ -63,17 +63,18 @@ export function compositeLayers(layers: CompositeLayer[]): Raster {
 
       for (let x = 0; x < src.width; x++, s += 4, d += 4) {
         const as = (ignoreAlpha ? 1 : srcData[s + 3] / 255) * opacity
-        if (as <= 0) continue
-
         const ab = dst[d + 3] / 255
+
         if (ab === 0) {
-          // Под пикселем пусто — режим наложения не влияет
+          // Под пикселем пусто — режим наложения не влияет. Цвет копируем даже при нулевой альфе,
+          // чтобы при отключении альфа-канала была видна яркость под маской (GB7)
           dst[d] = srcData[s]
           dst[d + 1] = srcData[s + 1]
           dst[d + 2] = srcData[s + 2]
           dst[d + 3] = Math.round(as * 255)
           continue
         }
+        if (as <= 0) continue
 
         const ao = as + ab * (1 - as)
         for (let c = 0; c < 3; c++) {
