@@ -1,0 +1,52 @@
+.levels-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .levels-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  // Ползунки как в Photoshop: чёрный, серый (гамма) и белый треугольники
+  .levels-slider {
+    margin: -4px 0 0;
+    padding: 10px 0;
+
+    .MuiSlider-rail {
+      height: 6px;
+      opacity: 1;
+      background: linear-gradient(to right, #000, #fff);
+      border: 1px solid #888;
+    }
+
+    .MuiSlider-thumb {
+      width: 14px;
+      height: 14px;
+      border: 2px solid #1976d2;
+
+      &[data-index="0"] {
+        background-color: #000;
+      }
+
+      &[data-index="1"] {
+        background-color: #808080;
+      }
+
+      &[data-index="2"] {
+        background-color: #fff;
+      }
+    }
+  }
+
+  .levels-inputs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 4px;
+  }
+}

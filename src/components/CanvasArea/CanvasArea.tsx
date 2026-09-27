@@ -8,13 +8,14 @@ import { useImageDocument } from "@/hooks/useImageDocument"
 import { useCommand, useCommandShortcuts } from "@/hooks/useCommand"
 import ScaleModal from "@/components/ScaleModal/ScaleModal"
 import SaveDialog from "@/components/SaveDialog/SaveDialog"
+import LevelsDialog from "@/components/LevelsDialog/LevelsDialog"
 import InfoPanel from "@/components/InfoPanel/InfoPanel"
 import { ColorInfoDisplay, ContrastInfo } from "@/components/ColorInfo/ColorInfo"
 import LayersPanel from "@/components/LayersPanel/LayersPanel"
 import ChannelsPanel from "@/components/ChannelsPanel/ChannelsPanel"
 import { isGB7File } from "@/utils/imageUtils"
 import { compositeLayers } from "@/utils/compositing"
-import { toImageData } from "@/utils/raster"
+import { toImageData, type Raster } from "@/utils/raster"
 import { fitScale } from "@/utils/zoom"
 import {
   ALL_CHANNELS_VISIBLE,
@@ -54,12 +55,26 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const { layersState, setLayersState, info, size, version, hasImage, openFile, resizeDocument } = useImageDocument()
+  const {
+    layersState,
+    setLayersState,
+    info,
+    size,
+    version,
+    hasImage,
+    activeLayer,
+    openFile,
+    replaceLayerImage,
+    resizeDocument,
+  } = useImageDocument()
 
   const [isDragging, setIsDragging] = useState(false)
   const [alertMessage, setAlertMessage] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [saveOpen, setSaveOpen] = useState(false)
+  const [levelsOpen, setLevelsOpen] = useState(false)
+  // Предпросмотр уровней/фильтров: временные пиксели для одного слоя, документ не меняется
+  const [preview, setPreview] = useState<{ layerId: string; raster: Raster } | null>(null)
   const [scale, setScale] = useState(100)
   // Правая панель: содержимое зависит от последнего инструмента с панелью
   const [panelKind, setPanelKind] = useState<PanelKind>("color")
@@ -78,10 +93,29 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
       externalActiveTool,
     })
 
-  // Сведённое изображение всех видимых слоёв в полном разрешении
-  const composite = useMemo(
-    () => (layersState.layers.length > 0 ? compositeLayers(layersState.layers) : null),
-    [layersState.layers]
+  // Сведённое изображение всех видимых слоёв в полном разрешении (с учётом предпросмотра)
+  const composite = useMemo(() => {
+    const { layers } = layersState
+    if (layers.length === 0) return null
+    const viewLayers = preview
+      ? layers.map((l) => (l.id === preview.layerId ? { ...l, imageData: preview.raster } : l))
+      : layers
+    return compositeLayers(viewLayers)
+  }, [layersState, preview])
+
+  const activeLayerId = activeLayer?.id
+  const handlePreview = useCallback(
+    (raster: Raster | null) => setPreview(raster && activeLayerId ? { layerId: activeLayerId, raster } : null),
+    [activeLayerId]
+  )
+
+  // Применение результата уровней/фильтров к активному слою
+  const applyToActiveLayer = useCallback(
+    (raster: Raster) => {
+      if (activeLayerId) replaceLayerImage(activeLayerId, toImageData(raster))
+      setPreview(null)
+    },
+    [activeLayerId, replaceLayerImage]
   )
 
   // Режим изображения (RGB / оттенки серого, есть ли прозрачность)
@@ -132,6 +166,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
   useCommand("open-file", () => fileInputRef.current?.click())
   useCommand("open-scale-modal", () => hasImage && setModalOpen(true))
   useCommand("save-file", () => hasImage && setSaveOpen(true))
+  useCommand("open-levels", () => hasImage && setLevelsOpen(true))
 
   const handleSave = async (name: string, format: SaveFormat, quality: number) => {
     if (!composite) return
@@ -273,6 +308,18 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
         onClose={() => setModalOpen(false)}
         sourceSize={size}
         onConfirm={(w, h, method) => resizeDocument(w, h, method)}
+      />
+
+      <LevelsDialog
+        open={levelsOpen}
+        layerName={activeLayer?.name ?? ""}
+        source={activeLayer?.imageData ?? null}
+        onPreview={handlePreview}
+        onApply={(raster) => {
+          applyToActiveLayer(raster)
+          setLevelsOpen(false)
+        }}
+        onClose={() => setLevelsOpen(false)}
       />
 
       <SaveDialog

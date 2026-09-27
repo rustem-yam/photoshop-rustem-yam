@@ -1,0 +1,41 @@
+// Окно не перехватывает клики вне себя — холст остаётся доступным
+.tool-dialog {
+  pointer-events: none;
+
+  .MuiDialog-container {
+    justify-content: flex-end;
+    align-items: flex-start;
+  }
+
+  .tool-dialog__paper {
+    pointer-events: auto;
+    margin: 16px 16px 16px 76px;
+    max-width: calc(100vw - 92px);
+    max-height: calc(100dvh - 80px);
+  }
+
+  .tool-dialog__title {
+    padding: 12px 20px;
+    font-size: 1.1rem;
+  }
+
+  .tool-dialog__content {
+    padding: 12px 20px;
+  }
+
+  // На телефоне — нижняя «шторка» на половину экрана, изображение остаётся видно сверху
+  &.tool-dialog--sheet {
+    .MuiDialog-container {
+      align-items: flex-end;
+      justify-content: stretch;
+    }
+
+    .tool-dialog__paper {
+      margin: 0;
+      width: 100%;
+      max-width: 100%;
+      max-height: 55dvh;
+      border-radius: 12px 12px 0 0;
+    }
+  }
+}
