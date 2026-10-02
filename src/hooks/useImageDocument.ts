@@ -4,6 +4,7 @@ import { getDocumentSize } from "@/utils/compositing"
 import { decodeImageFile } from "@/utils/imageUtils"
 import { createLayerFromImageData, withLayerImage } from "@/utils/layerUtils"
 import { bilinearResize, nearestNeighborResize } from "@/utils/interpolation"
+import { toImageData } from "@/utils/raster"
 import type { Layer } from "@/types/layers"
 
 export type ResizeMethod = "nearest" | "bilinear"
@@ -62,7 +63,7 @@ export const useImageDocument = () => {
         const src = layer.imageData
         const w = src.width === doc.width ? width : Math.max(1, Math.round((src.width * width) / doc.width))
         const h = src.height === doc.height ? height : Math.max(1, Math.round((src.height * height) / doc.height))
-        return withLayerImage(layer, resize(src, w, h))
+        return withLayerImage(layer, toImageData(resize(src, w, h)))
       })
       setLayersState({ ...layersState, layers: resized })
     },
