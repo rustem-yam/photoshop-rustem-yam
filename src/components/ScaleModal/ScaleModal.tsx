@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect, useState } from "react"
+import React, { useMemo, useEffect, useRef, useState } from "react"
 import {
   Dialog,
   DialogTitle,
@@ -15,15 +15,17 @@ import {
   Typography,
   Tooltip,
   Alert,
+  LinearProgress,
 } from "@mui/material"
 import { useForm, Controller } from "react-hook-form"
-import type { ResizeMethod } from "@/hooks/useImageDocument"
+import type { ProgressOptions, ResizeMethod } from "@/hooks/useImageDocument"
+import { isCancelled } from "@/utils/imageTasks"
 
 interface ScaleModalProps {
   open: boolean
   onClose: () => void
   sourceSize: { width: number; height: number }
-  onConfirm: (width: number, height: number, method: ResizeMethod) => void | Promise<void>
+  onConfirm: (width: number, height: number, method: ResizeMethod, options: ProgressOptions) => Promise<void>
 }
 
 interface ScaleFormData {
@@ -50,6 +52,8 @@ const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, sourceSize, onCo
   const aspect = useMemo(() => (origW && origH ? origW / origH : 1), [origW, origH])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [progress, setProgress] = useState(0)
+  const abortRef = useRef<AbortController | null>(null)
 
   const { control, watch, setValue, reset, handleSubmit } = useForm<ScaleFormData>({ defaultValues: DEFAULTS })
 
@@ -106,15 +110,27 @@ const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, sourceSize, onCo
     }
     setError(null)
     setBusy(true)
+    setProgress(0)
+    const controller = new AbortController()
+    abortRef.current = controller
     try {
-      await onConfirm(newW, newH, method)
+      await onConfirm(newW, newH, method, { onProgress: setProgress, signal: controller.signal })
       onClose()
     } catch (err) {
-      console.error("Ошибка обработки изображения:", err)
-      setError("Не удалось изменить размер изображения")
+      if (!isCancelled(err)) {
+        console.error("Ошибка обработки изображения:", err)
+        setError("Не удалось изменить размер изображения")
+      }
     } finally {
+      abortRef.current = null
       setBusy(false)
     }
+  }
+
+  // Во время обработки «Отмена» прерывает фоновую задачу
+  const handleCancel = () => {
+    if (abortRef.current) abortRef.current.abort()
+    else onClose()
   }
 
   const { width: newW, height: newH } = calculateNewDimensions()
@@ -127,7 +143,7 @@ const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, sourceSize, onCo
       : { min: { value: 1, message: "Минимум 1 px" }, max: { value: MAX_SIZE, message: `Максимум ${MAX_SIZE} px` } }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleCancel} maxWidth="sm" fullWidth>
       <DialogTitle>Изменение размера изображения</DialogTitle>
 
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -230,6 +246,15 @@ const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, sourceSize, onCo
             )}
           />
 
+          {busy && (
+            <>
+              <Typography variant="body2" sx={{ mt: 1 }}>
+                Обработка в фоновом потоке: {Math.round(progress * 100)}%
+              </Typography>
+              <LinearProgress variant="determinate" value={progress * 100} />
+            </>
+          )}
+
           {error && (
             <Alert severity="error" sx={{ mt: 1 }}>
               {error}
@@ -238,7 +263,7 @@ const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, sourceSize, onCo
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={onClose} color="secondary">
+          <Button onClick={handleCancel} color="secondary">
             Отмена
           </Button>
           <Button type="submit" variant="contained" disabled={busy}>

@@ -3,11 +3,17 @@ import { useLayers } from "@/hooks/useLayers"
 import { getDocumentSize } from "@/utils/compositing"
 import { decodeImageFile } from "@/utils/imageUtils"
 import { createLayerFromImageData, withLayerImage } from "@/utils/layerUtils"
-import { bilinearResize, nearestNeighborResize } from "@/utils/interpolation"
+import type { ResizeMethod } from "@/utils/interpolation"
+import { runImageTask } from "@/utils/imageTasks"
 import { toImageData } from "@/utils/raster"
 import type { Layer } from "@/types/layers"
 
-export type ResizeMethod = "nearest" | "bilinear"
+export type { ResizeMethod }
+
+export interface ProgressOptions {
+  onProgress?: (fraction: number) => void
+  signal?: AbortSignal
+}
 
 export interface DocumentInfo {
   fileName: string
@@ -51,21 +57,26 @@ export const useImageDocument = () => {
     [layersState, setLayersState]
   )
 
-  // Изменение реального размера изображения: масштабируются все слои
+  // Изменение реального размера изображения: масштабируются все слои (в фоновом потоке)
   const resizeDocument = useCallback(
-    (width: number, height: number, method: ResizeMethod) => {
+    async (width: number, height: number, method: ResizeMethod, { onProgress, signal }: ProgressOptions = {}) => {
       const { layers } = layersState
       const doc = getDocumentSize(layers)
       if (!doc.width || !doc.height) return
-      const resize = method === "nearest" ? nearestNeighborResize : bilinearResize
 
-      const resized = layers.map((layer) => {
+      const resized: Layer[] = []
+      for (let k = 0; k < layers.length; k++) {
+        const layer = layers[k]
         const src = layer.imageData
         const w = src.width === doc.width ? width : Math.max(1, Math.round((src.width * width) / doc.width))
         const h = src.height === doc.height ? height : Math.max(1, Math.round((src.height * height) / doc.height))
-        return withLayerImage(layer, toImageData(resize(src, w, h)))
-      })
-      setLayersState({ ...layersState, layers: resized })
+        const result = await runImageTask(
+          { op: "resize", src, width: w, height: h, method },
+          { signal, onProgress: (p) => onProgress?.((k + p) / layers.length) }
+        )
+        resized.push(withLayerImage(layer, toImageData(result)))
+      }
+      setLayersState((prev) => ({ ...prev, layers: resized }))
     },
     [layersState, setLayersState]
   )

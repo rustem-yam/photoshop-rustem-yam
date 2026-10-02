@@ -1,6 +1,7 @@
 import { createRaster, type Raster } from "./raster"
 
 export type ProgressCallback = (fraction: number) => void
+export type ResizeMethod = "nearest" | "bilinear"
 
 // Как часто сообщать о прогрессе (в строках результата)
 const PROGRESS_STEP = 64

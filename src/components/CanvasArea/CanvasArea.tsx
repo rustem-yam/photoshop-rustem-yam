@@ -307,7 +307,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         sourceSize={size}
-        onConfirm={(w, h, method) => resizeDocument(w, h, method)}
+        onConfirm={(w, h, method, options) => resizeDocument(w, h, method, options)}
       />
 
       <LevelsDialog
