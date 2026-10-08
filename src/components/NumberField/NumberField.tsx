@@ -8,13 +8,17 @@ interface NumberFieldProps {
   min?: number
   max?: number
   step?: number
-  decimals?: number
+  // число знаков после запятой или "auto" — целые без дробной части, дробные до 4 знаков
+  decimals?: number | "auto"
   disabled?: boolean
   className?: string
   ariaLabel?: string
 }
 
-const format = (v: number, decimals: number) => (decimals > 0 ? v.toFixed(decimals) : String(Math.round(v)))
+const format = (v: number, decimals: number | "auto") => {
+  if (decimals === "auto") return Number.isInteger(v) ? String(v) : String(Number(v.toFixed(4)))
+  return decimals > 0 ? v.toFixed(decimals) : String(Math.round(v))
+}
 
 // Числовое поле: пока пользователь печатает (например «1.» или «-»), значение не сбрасывается;
 // корректное число сразу передаётся наружу, при потере фокуса поле приводится к допустимому значению

@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react"
 import { isTypingTarget } from "@/hooks/useTools"
 
 // Команды из сайдбара и горячих клавиш для области холста
-export type AppCommand = "open-file" | "save-file" | "open-scale-modal" | "open-levels"
+export type AppCommand = "open-file" | "save-file" | "open-scale-modal" | "open-levels" | "open-filter"
 
 export const sendCommand = (command: AppCommand) => {
   window.dispatchEvent(new CustomEvent(command))

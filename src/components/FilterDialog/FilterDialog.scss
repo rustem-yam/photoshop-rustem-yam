@@ -1,0 +1,38 @@
+.filter-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 6px;
+
+  .filter-label {
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+  }
+
+  .filter-kernel-block {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  // Ядро — сетка 3×3 из числовых полей
+  .filter-kernel {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    max-width: 260px;
+
+    input {
+      text-align: center;
+    }
+  }
+
+  .filter-params {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+    margin-top: 4px;
+  }
+}

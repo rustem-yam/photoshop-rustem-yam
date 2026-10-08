@@ -1,7 +1,17 @@
 import React from "react"
 import "./Sidebar.scss"
 import { IconButton, Tooltip, Divider } from "@mui/material"
-import { AspectRatio, PanTool, Colorize, Layers, FolderOpen, Save, Gradient, Equalizer } from "@mui/icons-material"
+import {
+  AspectRatio,
+  PanTool,
+  Colorize,
+  Layers,
+  FolderOpen,
+  Save,
+  Gradient,
+  Equalizer,
+  BlurOn,
+} from "@mui/icons-material"
 import { TOOLS } from "@/types/tools"
 import type { ToolType } from "@/types/tools"
 import { sendCommand, type AppCommand } from "@/hooks/useCommand"
@@ -24,6 +34,7 @@ const ACTIONS: { command: AppCommand; title: string; icon: React.ReactNode; need
   { command: "save-file", title: "Сохранить как PNG / JPG / GB7 (Ctrl+S)", icon: <Save />, needsImage: true },
   { command: "open-scale-modal", title: "Изменить размер изображения", icon: <AspectRatio />, needsImage: true },
   { command: "open-levels", title: "Уровни (Ctrl+L)", icon: <Equalizer />, needsImage: true },
+  { command: "open-filter", title: "Фильтрация (ядро 3×3, медиана)", icon: <BlurOn />, needsImage: true },
 ]
 
 const Sidebar: React.FC<SidebarProps> = ({ hasImage, activeTool, onToolSelect }) => {
