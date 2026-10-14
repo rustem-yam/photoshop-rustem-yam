@@ -39,3 +39,11 @@
     }
   }
 }
+
+// Планшет: панель инструментов сверху, окно — под ней
+@media (max-width: 768px) {
+  .tool-dialog:not(.tool-dialog--sheet) .tool-dialog__paper {
+    margin: 72px 16px 16px;
+    max-width: calc(100vw - 32px);
+  }
+}

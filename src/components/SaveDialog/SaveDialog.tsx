@@ -14,6 +14,7 @@ import {
   Slider,
   TextField,
   Typography,
+  useMediaQuery,
 } from "@mui/material"
 import { SAVE_FORMATS, type SaveFormat } from "@/utils/exportImage"
 
@@ -32,6 +33,7 @@ const SaveDialog: React.FC<SaveDialogProps> = ({ open, onClose, defaultName, def
   const [quality, setQuality] = useState(92)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const isPhone = useMediaQuery("(max-width: 600px)")
 
   useEffect(() => {
     if (open) {
@@ -62,7 +64,7 @@ const SaveDialog: React.FC<SaveDialogProps> = ({ open, onClose, defaultName, def
   }
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="xs" fullWidth fullScreen={isPhone}>
       <DialogTitle>Сохранить изображение</DialogTitle>
       <DialogContent dividers>
         <Typography variant="body2" gutterBottom>

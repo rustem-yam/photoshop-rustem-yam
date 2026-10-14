@@ -99,3 +99,41 @@
     }
   }
 }
+
+// Узкий экран: инструменты в одну строку над холстом, с прокруткой по горизонтали
+@media (max-width: 768px) {
+  .sidebar {
+    width: 100%;
+    height: 56px;
+    flex: 0 0 56px;
+    flex-direction: row;
+    align-items: center;
+    padding: 4px 8px;
+    gap: 4px;
+    border-right: none;
+    border-bottom: 2px solid #161616;
+    overflow-x: auto;
+    overflow-y: hidden;
+
+    .tool-section,
+    .action-section {
+      flex-direction: row;
+    }
+
+    .sidebar-divider {
+      align-self: center;
+      width: 0;
+      height: 32px;
+      margin: 0 4px;
+      border-bottom: none;
+      border-right: 1px solid #666;
+    }
+
+    .tool-button,
+    .action-button {
+      width: 44px;
+      height: 44px;
+      flex: none;
+    }
+  }
+}

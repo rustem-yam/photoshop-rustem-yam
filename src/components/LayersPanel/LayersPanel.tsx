@@ -24,6 +24,7 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   Divider,
+  useMediaQuery,
 } from "@mui/material"
 import {
   Add as AddIcon,
@@ -173,6 +174,7 @@ const SortableLayerItem: React.FC<SortableLayerItemProps> = ({
 
 const LayersPanel: React.FC<LayersPanelProps> = ({ layersState, onLayersStateChange, imageSize }) => {
   const [addLayerDialogOpen, setAddLayerDialogOpen] = useState(false)
+  const isPhone = useMediaQuery("(max-width: 600px)")
   const [newLayerName, setNewLayerName] = useState("")
 
   const [selectedColor, setSelectedColor] = useState("#000000")
@@ -349,7 +351,13 @@ const LayersPanel: React.FC<LayersPanelProps> = ({ layersState, onLayersStateCha
 
       <Divider />
 
-      <Dialog open={addLayerDialogOpen} onClose={() => setAddLayerDialogOpen(false)}>
+      <Dialog
+        open={addLayerDialogOpen}
+        onClose={() => setAddLayerDialogOpen(false)}
+        fullScreen={isPhone}
+        fullWidth
+        maxWidth="xs"
+      >
         <DialogTitle>Добавить слой</DialogTitle>
         <DialogContent>
           <TextField

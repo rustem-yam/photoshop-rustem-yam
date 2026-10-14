@@ -142,8 +142,13 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
   const getFitScale = useCallback(() => {
     const area = wrapperRef.current ?? mainRef.current
     if (!area) return 100
+    const style = getComputedStyle(area)
+    const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
     const statusBarHeight = wrapperRef.current ? 0 : 48
-    return fitScale(size, { width: area.clientWidth - 32, height: area.clientHeight - statusBarHeight - 32 })
+    return fitScale(size, {
+      width: area.clientWidth - paddingX - 32,
+      height: area.clientHeight - statusBarHeight - 32,
+    })
   }, [size])
 
   // Новый файл — вписываем в окно (крупные изображения уменьшаются, мелкие остаются 100%)
@@ -244,7 +249,7 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
   return (
     <div
       ref={mainRef}
-      className={`main ${isDragging ? "dragging" : ""} tool-${activeTool}`}
+      className={`main ${isDragging ? "dragging" : ""} ${panelOpen ? "panel-open" : ""} tool-${activeTool}`}
       onDragOver={(e) => {
         e.preventDefault()
         setIsDragging(true)

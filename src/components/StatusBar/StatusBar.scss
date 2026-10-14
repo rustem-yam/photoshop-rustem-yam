@@ -69,3 +69,29 @@
     }
   }
 }
+
+@media (max-width: 600px) {
+  .status-bar {
+    font-size: 12px;
+    padding: 4px 8px;
+
+    .status-info {
+      flex-basis: 100%;
+      white-space: normal;
+      font-size: 12px;
+    }
+  }
+
+  .scale-controls {
+    width: 100%;
+
+    .scale-label {
+      display: none;
+    }
+
+    .scale-slider {
+      flex: 1;
+      width: auto;
+    }
+  }
+}

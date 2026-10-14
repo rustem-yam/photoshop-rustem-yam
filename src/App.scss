@@ -1,6 +1,14 @@
 .app {
   display: flex;
   height: 100vh;
+  height: 100dvh; // учитывает панели мобильного браузера
   min-height: 0;
   overflow: hidden;
+}
+
+// Планшеты и телефоны: панель инструментов сверху
+@media (max-width: 768px) {
+  .app {
+    flex-direction: column;
+  }
 }

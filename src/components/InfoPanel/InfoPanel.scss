@@ -8,7 +8,7 @@
   cursor: default; // Сброс курсора для информационной панели
 
   &.open {
-    width: 37.5rem; // 600px
+    width: min(28rem, 100vw);
   }
 
   &.closed {
@@ -237,7 +237,11 @@
 }
 
 @media (max-width: 768px) {
+  // Под верхней панелью инструментов и над строкой состояния, поверх холста на всю ширину
   .info-panel {
+    top: 56px;
+    height: calc(100dvh - 56px - 76px);
+
     &.open {
       width: 100vw;
     }

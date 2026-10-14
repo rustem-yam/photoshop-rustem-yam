@@ -16,6 +16,7 @@ import {
   Tooltip,
   Alert,
   LinearProgress,
+  useMediaQuery,
 } from "@mui/material"
 import { useForm, Controller } from "react-hook-form"
 import type { ProgressOptions, ResizeMethod } from "@/hooks/useImageDocument"
@@ -52,6 +53,7 @@ const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, sourceSize, onCo
   const aspect = useMemo(() => (origW && origH ? origW / origH : 1), [origW, origH])
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const isPhone = useMediaQuery("(max-width: 600px)")
   const [progress, setProgress] = useState(0)
   const abortRef = useRef<AbortController | null>(null)
 
@@ -143,7 +145,7 @@ const ScaleModal: React.FC<ScaleModalProps> = ({ open, onClose, sourceSize, onCo
       : { min: { value: 1, message: "Минимум 1 px" }, max: { value: MAX_SIZE, message: `Максимум ${MAX_SIZE} px` } }
 
   return (
-    <Dialog open={open} onClose={handleCancel} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleCancel} maxWidth="sm" fullWidth fullScreen={isPhone}>
       <DialogTitle>Изменение размера изображения</DialogTitle>
 
       <form onSubmit={handleSubmit(onSubmit)}>
