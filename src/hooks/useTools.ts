@@ -18,6 +18,13 @@ export const isTypingTarget = (target: EventTarget | null): boolean => {
   return target.closest("input, textarea, select, [role='dialog'], [role='listbox']") !== null
 }
 
+// Сдвиг рукой: изображение можно увести в любую сторону, пока на экране остаётся хотя бы 100 px
+const PAN_MARGIN = 100
+export const clampPan = (offset: number, canvasSize: number, viewportSize: number) => {
+  const limit = Math.max(0, (canvasSize + viewportSize) / 2 - PAN_MARGIN)
+  return Math.max(-limit, Math.min(limit, offset))
+}
+
 // Хук для управления инструментами: рука, пипетка, курсор
 export const useTools = (params: UseToolsParams = {}) => {
   const { canvasWidth = 0, canvasHeight = 0, onToolChange, externalActiveTool } = params
@@ -104,15 +111,10 @@ export const useTools = (params: UseToolsParams = {}) => {
         const newOffsetX = prev.offsetX + deltaX
         const newOffsetY = prev.offsetY + deltaY
 
-        const maxOffsetX = Math.max(0, canvasWidth - viewportWidth + 100) // 100px запас
-        const maxOffsetY = Math.max(0, canvasHeight - viewportHeight + 100)
-        const minOffsetX = Math.min(0, -canvasWidth + 100)
-        const minOffsetY = Math.min(0, -canvasHeight + 100)
-
         return {
           ...prev,
-          offsetX: Math.max(minOffsetX, Math.min(maxOffsetX, newOffsetX)),
-          offsetY: Math.max(minOffsetY, Math.min(maxOffsetY, newOffsetY)),
+          offsetX: clampPan(newOffsetX, canvasWidth, viewportWidth),
+          offsetY: clampPan(newOffsetY, canvasHeight, viewportHeight),
           startX: event.clientX,
           startY: event.clientY,
         }
@@ -153,62 +155,19 @@ export const useTools = (params: UseToolsParams = {}) => {
       } else if (event.key === "Escape") {
         event.preventDefault()
         setTool("none")
-      } else if (activeTool === "hand") {
-        const moveStep = 10
-        switch (event.key) {
-          case "ArrowLeft":
-            event.preventDefault()
-            setHandState((prev) => {
-              const newOffsetX = prev.offsetX + moveStep
-              const effectiveCanvasWidth = canvasWidth || 0
-              const maxOffsetLeft = effectiveCanvasWidth - 500
-              return {
-                ...prev,
-                offsetX: Math.min(maxOffsetLeft, newOffsetX),
-                isActive: true,
-              }
-            })
-            break
-          case "ArrowRight":
-            event.preventDefault()
-            setHandState((prev) => {
-              const newOffsetX = prev.offsetX - moveStep
-              const effectiveCanvasWidth = canvasWidth || 0
-              const maxOffsetRight = effectiveCanvasWidth - 500
-              return {
-                ...prev,
-                offsetX: Math.max(-maxOffsetRight, newOffsetX),
-                isActive: true,
-              }
-            })
-            break
-          case "ArrowUp":
-            event.preventDefault()
-            setHandState((prev) => {
-              const newOffsetY = prev.offsetY + moveStep
-              const effectiveCanvasHeight = canvasHeight || 0
-              const maxOffsetUp = effectiveCanvasHeight - 500
-              return {
-                ...prev,
-                offsetY: Math.min(maxOffsetUp, newOffsetY),
-                isActive: true,
-              }
-            })
-            break
-          case "ArrowDown":
-            event.preventDefault()
-            setHandState((prev) => {
-              const newOffsetY = prev.offsetY - moveStep
-              const effectiveCanvasHeight = canvasHeight || 0
-              const maxOffsetDown = effectiveCanvasHeight - 500
-              return {
-                ...prev,
-                offsetY: Math.max(-maxOffsetDown, newOffsetY),
-                isActive: true,
-              }
-            })
-            break
-        }
+      } else if (activeTool === "hand" && event.key.startsWith("Arrow")) {
+        // Стрелки двигают изображение рукой с шагом 10 px
+        const step = 10
+        const dx = event.key === "ArrowLeft" ? step : event.key === "ArrowRight" ? -step : 0
+        const dy = event.key === "ArrowUp" ? step : event.key === "ArrowDown" ? -step : 0
+        if (!dx && !dy) return
+        event.preventDefault()
+        setHandState((prev) => ({
+          ...prev,
+          isActive: true,
+          offsetX: clampPan(prev.offsetX + dx, canvasWidth, window.innerWidth),
+          offsetY: clampPan(prev.offsetY + dy, canvasHeight, window.innerHeight),
+        }))
       }
     },
     [activeTool, setTool, canvasWidth, canvasHeight]
@@ -216,11 +175,14 @@ export const useTools = (params: UseToolsParams = {}) => {
 
   useEffect(() => {
     document.addEventListener("keydown", handleKeyDown)
-    document.addEventListener("mouseup", handleHandMouseUp)
+    // pointerup — мышь, палец и перо
+    document.addEventListener("pointerup", handleHandMouseUp)
+    document.addEventListener("pointercancel", handleHandMouseUp)
 
     return () => {
       document.removeEventListener("keydown", handleKeyDown)
-      document.removeEventListener("mouseup", handleHandMouseUp)
+      document.removeEventListener("pointerup", handleHandMouseUp)
+      document.removeEventListener("pointercancel", handleHandMouseUp)
     }
   }, [handleKeyDown, handleHandMouseUp])
 

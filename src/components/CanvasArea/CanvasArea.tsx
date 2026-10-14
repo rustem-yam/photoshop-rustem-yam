@@ -219,11 +219,14 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
     if (pixel) handlePipetteClick(e.nativeEvent, pixel)
   }
 
-  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (activeTool === "hand") handleHandMouseDown(e.nativeEvent)
+  const handleCanvasPointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
+    if (activeTool !== "hand") return
+    // Захват указателя: перетаскивание продолжается, даже если палец/курсор ушёл с холста
+    e.currentTarget.setPointerCapture(e.pointerId)
+    handleHandMouseDown(e.nativeEvent)
   }
 
-  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleCanvasPointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (activeTool === "hand") {
       handleHandMouseMove(e.nativeEvent, scaledW, scaledH, window.innerWidth, window.innerHeight)
     }
@@ -296,8 +299,8 @@ const CanvasArea: React.FC<CanvasAreaProps> = ({ onImageChange, onToolChange, ac
               className={scale >= 100 ? "pixelated" : undefined}
               style={{ width: scaledW, height: scaledH }}
               onClick={handleCanvasClick}
-              onMouseDown={handleCanvasMouseDown}
-              onMouseMove={handleCanvasMouseMove}
+              onPointerDown={handleCanvasPointerDown}
+              onPointerMove={handleCanvasPointerMove}
             ></canvas>
           </div>
         </div>

@@ -16,6 +16,8 @@
 
   &.tool-hand canvas {
     cursor: grab;
+    // жесты пальцем двигают изображение, а не страницу
+    touch-action: none;
 
     &:active {
       cursor: grabbing;
