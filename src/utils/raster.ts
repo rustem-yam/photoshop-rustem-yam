@@ -13,12 +13,6 @@ export const createRaster = (width: number, height: number): Raster => ({
   data: new Uint8ClampedArray(width * height * 4),
 })
 
-export const cloneRaster = (raster: Raster): Raster => ({
-  width: raster.width,
-  height: raster.height,
-  data: new Uint8ClampedArray(raster.data),
-})
-
 export const toImageData = (raster: Raster): ImageData => {
   if (typeof ImageData !== "undefined" && raster instanceof ImageData) return raster
   return new ImageData(raster.data, raster.width, raster.height)

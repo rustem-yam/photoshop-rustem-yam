@@ -12,19 +12,13 @@ export async function getImageDepth(file: File, imageData: ImageData): Promise<n
   return detectDepth(bytes) ?? (rasterHasAlpha(imageData) ? 32 : 24)
 }
 
-export const loadImage = (file: File | string): Promise<HTMLImageElement> => {
-  return new Promise((resolve, reject) => {
+export const loadImage = (file: File): Promise<HTMLImageElement> =>
+  new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => resolve(img)
     img.onerror = () => reject(new Error("браузер не смог декодировать изображение"))
-
-    if (typeof file === "string") {
-      img.src = file
-    } else {
-      img.src = URL.createObjectURL(file)
-    }
+    img.src = URL.createObjectURL(file)
   })
-}
 
 // Декодирование файла в пиксели RGBA и определение глубины цвета
 export async function decodeImageFile(file: File): Promise<{ imageData: ImageData; depth: number }> {
