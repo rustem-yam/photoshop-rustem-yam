@@ -20,6 +20,14 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+
+  // Длинное содержимое прокручивается внутри панели, а не вылезает на строку состояния
+  .MuiCollapse-root {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
   border-radius: 0;
   border-left: 2px solid #161616;
   background-color: #535353;
