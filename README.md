@@ -1,69 +1,99 @@
-# React + TypeScript + Vite
+# Web Photoshop
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Графический редактор в браузере: React + TypeScript + Vite, MUI.
+Ямалтдинов Рустем, группа 221-321.
 
-Currently, two official plugins are available:
+## Запуск
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev      # режим разработки, http://localhost:5173
+npm run build    # сборка в dist/
+npm test         # модульные тесты (Vitest)
+npm run lint     # ESLint
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## Возможности
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+### ЛР1. Работа с изображениями
 
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+- Открытие PNG, JPG, JPEG и GB7: кнопка в сайдбаре, `Ctrl+O` или перетаскивание файла в окно.
+- Сохранение в PNG, JPG, JPEG и GB7 (`Ctrl+S`). Сохраняются все видимые слои. В JPEG прозрачные области заливаются белым, для JPEG можно выбрать качество.
+- GB7 декодируется и кодируется собственным кодом: [src/utils/gb7.ts](src/utils/gb7.ts).
+- Маска GB7: при чтении превращается в альфа-канал. При записи маска ставится, если в изображении есть прозрачность; пиксель с альфой ≥ 50% считается видимым.
+- В строке состояния — ширина, высота и глубина цвета. Глубина берётся из заголовка файла: IHDR для PNG, SOF для JPEG. У GB7 это 7 бит, а с маской 8.
+- Адаптивный интерфейс. На планшете и телефоне инструменты переезжают в строку над холстом, диалоги открываются на весь экран, окна уровней и фильтров — шторкой снизу. Рука и пипетка работают пальцем.
+
+### ЛР2. Цветовые каналы и пипетка
+
+- Инструмент «Каналы» (`C`) показывает превью каналов: RGB, Красный, Зелёный, Синий или «Серый» для изображений в оттенках серого. Если есть прозрачность, добавляется «Альфа».
+- Значок глаза включает и выключает канал. Клик по строке оставляет видимым только этот канал. Один канал показывается в оттенках серого, а с галочкой — в своём цвете. Без альфы изображение становится непрозрачным, только альфа показывается как маска.
+- Каналы меняют только отображение. Пипетка, уровни, фильтры и сохранение работают с исходными пикселями.
+- Пипетка (`I`): клик — основной цвет, `Alt`/`Ctrl`/`Shift` + клик — дополнительный. Показываются координаты, альфа, RGB, XYZ, CIELAB (D65) и LCh, а также контраст двух цветов по WCAG.
+
+### ЛР3. Уровни
+
+- Окно «Уровни» (`Ctrl+L`) применяется к активному слою.
+- Гистограмма: Master по яркости BT.601 или отдельно R, G, B. Режимы — линейный и логарифмический.
+- Чёрная и белая точки, гамма 0.10–9.99. Задаются ползунками (чёрный, серый, белый, как в Photoshop) или числами.
+- Предпросмотр на холсте, «Сбросить», «Отмена», «Применить». Master применяется поверх настроек отдельных каналов.
+
+### ЛР4. Масштабирование
+
+- Масштаб просмотра от 12% до 300%: ползунок, кнопки −/+, точное значение и «Вписать в окно».
+- Изменение реального размера изображения: в пикселях или процентах, с сохранением пропорций или без.
+- Методы — ближайший сосед и билинейная интерполяция (свои реализации: [src/utils/interpolation.ts](src/utils/interpolation.ts)). Масштабируются все слои, обработка идёт в Web Worker с прогрессом и отменой.
+
+### ЛР5. Фильтрация
+
+- Редактируемое ядро 3×3 с делителем, смещением и модулем результата. Кнопка «Нормировать» ставит делитель равным сумме коэффициентов.
+- Пресеты: тождественное отображение, повышение резкости, фильтр Гаусса 3×3, прямоугольное размытие, операторы Прюитта X и Y, медианный фильтр 3×3.
+- Выбор каналов для обработки: R, G, B (или «Серый») и альфа.
+- Обработка краёв: продолжение края, зеркальное отражение, заворачивание, нулевые пиксели, не обрабатывать края.
+- Предпросмотр. Расчёт идёт асинхронно в Web Worker ([src/workers](src/workers)) с прогрессом, а при изменении параметров предыдущий расчёт прерывается.
+
+### Слои
+
+- До двух слоёв: из файла или заливка цветом. Есть видимость, непрозрачность, режимы наложения (обычный, умножение, экран, наложение), порядок перетаскиванием и альфа-канал слоя.
+- Слои сводятся в полном разрешении по формулам W3C Compositing: [src/utils/compositing.ts](src/utils/compositing.ts).
+
+## Горячие клавиши
+
+| Клавиша | Действие |
+| --- | --- |
+| `H` | Рука (стрелки двигают изображение) |
+| `I` | Пипетка |
+| `L` | Слои |
+| `C` | Каналы |
+| `Esc` | Сбросить инструмент |
+| `Ctrl+O` | Открыть |
+| `Ctrl+S` | Сохранить |
+| `Ctrl+L` | Уровни |
+
+Клавиши инструментов работают в любой раскладке и не срабатывают, пока курсор стоит в поле ввода.
+
+## Формат GB7
+
+| Байты | Содержимое |
+| --- | --- |
+| 0–3 | Сигнатура `47 42 37 1D` («GB7» + GS) |
+| 4 | Версия `01` |
+| 5 | Флаги: бит 0 — есть маска |
+| 6–7 | Ширина, big-endian |
+| 8–9 | Высота, big-endian |
+| 10–11 | Зарезервировано `00 00` |
+| 12… | По байту на пиксель: биты 0–6 — яркость 0–127, бит 7 — маска (1 — пиксель виден) |
+
+## Структура
+
 ```
+src/
+  components/   интерфейс: холст, сайдбар, панели, диалоги
+  hooks/        состояние документа, инструменты, команды и горячие клавиши
+  utils/        обработка изображений (без DOM, покрыто тестами):
+                gb7, depth, compositing, channels, histogram, levels,
+                interpolation, filters, colorUtils
+  workers/      Web Worker для изменения размера и фильтрации
+```
+
+Модульные тесты лежат в [src/utils/\_\_tests\_\_](src/utils/__tests__).
