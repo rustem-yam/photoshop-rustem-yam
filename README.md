@@ -13,6 +13,15 @@ npm test         # модульные тесты (Vitest)
 npm run lint     # ESLint
 ```
 
+## Публикация на GitHub Pages
+
+Сайт собирается и публикуется автоматически при каждом пуше в `main`: [.github/workflows/deploy.yml](.github/workflows/deploy.yml).
+Сначала прогоняются тесты, затем сборка с путём `/<имя-репозитория>/`.
+
+Один раз нужно включить: **Settings → Pages → Source: GitHub Actions**.
+В форке также нужно разрешить Actions на вкладке **Actions**.
+Адрес сайта: `https://<владелец>.github.io/photoshop-rustem-yam/`.
+
 ## Возможности
 
 ### ЛР1. Работа с изображениями
